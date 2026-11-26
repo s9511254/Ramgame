@@ -1,0 +1,3449 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="artifact-type" content="tool">
+  <meta name="design-style" content="briefing">
+  <title>Ramsey 避讓遊戲九大策略對決、雙規則萬局模擬與人腦接管實驗室</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+
+      /* Page and surfaces: Briefing warm stone-white dossier */
+      --background: #faf9f5;
+      --surface-container-low: #ffffff;
+      --surface-container: #f1efe8;
+      --surface-container-high: #e6e2d6;
+
+      /* Ink */
+      --on-surface: #17181a;
+      --on-surface-variant: #56585c;
+
+      /* Rules */
+      --outline: #17181a;
+      --outline-variant: #dedad0;
+      --border-soft: #c8c4b8;
+
+      /* Accents */
+      --primary: #17181a;
+      --on-primary: #faf9f5;
+      --primary-container: #f2b705;
+      --on-primary-container: #17181a;
+      --secondary: #1f4e5f;
+      --tertiary: #785008;
+      --tag-warm: #f5e6c4;
+      --error: #b42318;
+      --on-error: #ffffff;
+
+      /* Semantic */
+      --positive: #2b6e52;
+      --positive-bg: #e7f2ec;
+      --warning: #9a5b00;
+      --warning-bg: #fdf3dc;
+      --error-bg: #fbeae8;
+      --focus: #1f4e5f;
+
+      /* Data series & Game colors */
+      --data-1: #1f4e5f;      /* Blue player / Petrol slate */
+      --data-2: #d99000;      /* Dossier gold / Double mine */
+      --data-3: #2b6e52;      /* Civic pine / Safe edge */
+      --data-4: #b84a39;      /* Red player / Brick red */
+      --data-context: #c4bfb2;
+
+      /* Fonts */
+      --font-headline: 'Source Serif 4', 'Noto Serif TC', serif;
+      --font-body: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+      --font-label: 'Geist Mono', 'Noto Sans TC', monospace;
+
+      /* Shape */
+      --rounded: 0.25rem;
+      --rounded-lg: 0.375rem;
+      --rounded-full: 0.25rem;
+      --badge-radius: 2px;
+
+      /* Style effects */
+      --section-rule: 1.5px solid var(--outline);
+      --card-border: 1px solid var(--outline-variant);
+      --heading-tracking: -0.02em;
+      --label-tracking: 0.06em;
+
+      /* Type scale (Focused Tool / Dashboard) */
+      --display-size: clamp(1.65rem, 1.35rem + 1.1vw, 2.25rem);
+      --headline-size: clamp(1.2rem, 1.05rem + 0.45vw, 1.45rem);
+      --subhead-size: clamp(1.02rem, 0.96rem + 0.22vw, 1.15rem);
+      --body-size: clamp(0.9375rem, 0.9rem + 0.12vw, 1rem);
+      --label-size: 0.75rem;
+
+      /* Spacing scale */
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2.5rem;
+      --space-2xl: 4rem;
+
+      /* Motion */
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+      --dur-micro: 120ms;
+      --dur-short: 220ms;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      overflow-x: clip;
+      margin: 0;
+      padding: 0;
+      background: var(--background);
+      color: var(--on-surface);
+      font-family: var(--font-body);
+      font-size: var(--body-size);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    header { position: static !important; }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+    }
+
+    :focus-visible {
+      outline: 2.5px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .page-grid {
+      display: grid;
+      gap: var(--space-xl);
+      padding: var(--space-lg) var(--space-lg) var(--space-2xl);
+      max-width: 1280px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+    .page-grid * { min-width: 0; }
+
+    /* Dossier Header & Section Bars */
+    .dossier-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-sm);
+      border-bottom: var(--section-rule);
+      padding-bottom: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+    .dossier-pill {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      padding: 0.2rem 0.55rem;
+      border-radius: var(--badge-radius);
+      white-space: nowrap;
+    }
+    .dossier-meta {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--on-surface-variant);
+      letter-spacing: 0.02em;
+    }
+    .index-num {
+      font-family: var(--font-label);
+      font-weight: 600;
+      font-size: var(--label-size);
+      color: var(--secondary);
+      background: var(--surface-container);
+      padding: 0.15rem 0.45rem;
+      border-radius: var(--badge-radius);
+    }
+
+    .masthead-title {
+      font-family: var(--font-headline);
+      font-weight: 700;
+      font-size: var(--display-size);
+      line-height: 1.15;
+      letter-spacing: var(--heading-tracking);
+      color: var(--on-surface);
+      margin: 0;
+    }
+    .standfirst {
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: var(--subhead-size);
+      color: var(--secondary);
+      margin: var(--space-xs) 0 0;
+      max-width: 72ch;
+    }
+
+    .section-heading {
+      font-family: var(--font-headline);
+      font-weight: 600;
+      font-size: var(--headline-size);
+      line-height: 1.2;
+      margin: 0;
+      color: var(--on-surface);
+    }
+    .section-lead {
+      margin: var(--space-xs) 0 var(--space-md);
+      color: var(--on-surface-variant);
+      max-width: 72ch;
+    }
+
+    /* Global Control Ribbon */
+    .control-ribbon {
+      background: var(--surface-container-low);
+      border: var(--card-border);
+      border-top: var(--section-rule);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-md) var(--space-lg);
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.35fr);
+      gap: var(--space-lg);
+      align-items: start;
+    }
+
+    .control-group-title {
+      display: block;
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      font-weight: 600;
+      color: var(--on-surface-variant);
+      margin-bottom: var(--space-xs);
+    }
+
+    .segmented-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+    }
+    .seg-btn {
+      min-height: 44px;
+      padding: var(--space-xs) var(--space-md);
+      border-radius: var(--rounded);
+      border: 1px solid var(--border-soft);
+      background: var(--surface-container-low);
+      color: var(--on-surface);
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: inline-flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      text-align: left;
+      transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out);
+    }
+    .seg-btn:hover { background: var(--surface-container); }
+    .seg-btn.is-active {
+      background: var(--primary);
+      color: var(--on-primary);
+      border-color: var(--primary);
+    }
+    .seg-btn .sub-note {
+      font-family: var(--font-label);
+      font-size: 0.7rem;
+      font-weight: 400;
+      opacity: 0.85;
+    }
+
+    .rule-callout {
+      margin-top: var(--space-sm);
+      padding: var(--space-xs) var(--space-sm);
+      background: var(--surface-container);
+      border-left: 3px solid var(--secondary);
+      font-size: 0.84rem;
+      color: var(--on-surface);
+    }
+
+    .depth-status-strip {
+      margin-top: var(--space-sm);
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      align-items: center;
+      font-family: var(--font-label);
+      font-size: 0.76rem;
+      color: var(--on-surface-variant);
+    }
+    .mono-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.18rem 0.5rem;
+      border-radius: var(--badge-radius);
+      background: var(--surface-container);
+      color: var(--on-surface);
+      font-family: var(--font-label);
+      font-size: 0.75rem;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    .mono-badge.is-gold {
+      background: var(--tag-warm);
+      color: var(--tertiary);
+    }
+    .mono-badge.is-good {
+      background: var(--positive-bg);
+      color: var(--positive);
+    }
+    .mono-badge.is-warn {
+      background: var(--warning-bg);
+      color: var(--warning);
+    }
+    .mono-badge.is-danger {
+      background: var(--error-bg);
+      color: var(--error);
+    }
+
+    /* Buttons & Form Inputs */
+    .btn {
+      min-height: 44px;
+      padding: 0.5rem 0.95rem;
+      border-radius: var(--rounded);
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      border: 1px solid var(--border-soft);
+      background: var(--surface-container-low);
+      color: var(--on-surface);
+      transition: background-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
+      white-space: nowrap;
+    }
+    .btn:hover:not(:disabled) { background: var(--surface-container); }
+    .btn:active:not(:disabled) { transform: translateY(1px); }
+    .btn:disabled { opacity: 0.48; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--on-primary);
+      border-color: var(--primary);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--secondary);
+      border-color: var(--secondary);
+    }
+    .btn-accent {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      border-color: var(--outline);
+    }
+    .btn-accent:hover:not(:disabled) {
+      background: var(--tag-warm);
+    }
+    .btn-takeover-active {
+      background: var(--secondary);
+      color: var(--on-primary);
+      border-color: var(--secondary);
+    }
+
+    .field-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .field-label {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      font-weight: 600;
+      color: var(--on-surface-variant);
+    }
+    .field-select, .field-input {
+      min-height: 44px;
+      padding: 0.45rem 2rem 0.45rem 0.65rem;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--rounded);
+      background: var(--surface-container-low);
+      color: var(--on-surface);
+      font-weight: 500;
+      font-size: 0.875rem;
+    }
+    .field-input { padding-right: 0.65rem; }
+
+    /* Figure Cards */
+    .figure-card {
+      background: var(--surface-container-low);
+      border: var(--card-border);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-md) var(--space-lg);
+    }
+
+    /* Section 01: Duel Lab Layout */
+    .duel-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 5.2fr) minmax(340px, 6.8fr);
+      gap: var(--space-lg);
+      align-items: start;
+    }
+
+    .matchup-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: var(--space-sm);
+      align-items: end;
+    }
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      margin-top: var(--space-md);
+      align-items: center;
+    }
+
+    /* K6 Interactive SVG Stage */
+    .board-stage {
+      position: relative;
+      margin-top: var(--space-md);
+      background: var(--background);
+      border: var(--card-border);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-sm);
+    }
+    .board-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-xs);
+      margin-bottom: var(--space-xs);
+    }
+    .board-svg-wrap {
+      width: 100%;
+      aspect-ratio: 1 / 0.88;
+      min-height: 310px;
+      position: relative;
+      user-select: none;
+      touch-action: none;
+    }
+    svg.k6-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* SVG Graph Styles using tokens only */
+    .k6-tri-loss {
+      fill: var(--error-bg);
+      opacity: 0.72;
+      stroke: var(--error);
+      stroke-width: 1.5;
+      stroke-dasharray: 4 3;
+    }
+    .k6-edge-hit {
+      stroke: transparent;
+      stroke-width: 18;
+      cursor: pointer;
+    }
+    .k6-edge-line {
+      fill: none;
+      stroke-linecap: round;
+      pointer-events: none;
+      transition: stroke-width var(--dur-micro) var(--ease-out), opacity var(--dur-micro) var(--ease-out);
+    }
+    .k6-edge-uncolored-safe {
+      stroke: var(--border-soft);
+      stroke-width: 2;
+      opacity: 0.75;
+    }
+    .k6-edge-single-r {
+      stroke: var(--data-4);
+      stroke-width: 2.2;
+      stroke-dasharray: 4 4;
+      opacity: 0.72;
+    }
+    .k6-edge-single-b {
+      stroke: var(--data-1);
+      stroke-width: 2.2;
+      stroke-dasharray: 4 4;
+      opacity: 0.72;
+    }
+    .k6-edge-double-mine {
+      stroke: var(--data-2);
+      stroke-width: 3.2;
+      stroke-dasharray: 6 3;
+    }
+    .k6-edge-played-red {
+      stroke: var(--data-4);
+      stroke-width: 5;
+    }
+    .k6-edge-played-blue {
+      stroke: var(--data-1);
+      stroke-width: 5;
+    }
+    .k6-edge-last {
+      filter: drop-shadow(0 0 3px var(--primary-container));
+    }
+    .k6-edge-selected {
+      stroke: var(--primary-container);
+      stroke-width: 6.5;
+    }
+    .k6-vertex-circle {
+      fill: var(--surface-container-low);
+      stroke: var(--outline);
+      stroke-width: 2.2;
+      cursor: grab;
+      transition: fill var(--dur-micro) var(--ease-out);
+    }
+    .k6-vertex-circle:active { cursor: grabbing; }
+    .k6-vertex-circle.is-picked {
+      fill: var(--primary-container);
+      stroke: var(--outline);
+      stroke-width: 3;
+    }
+    .k6-vertex-label {
+      font-family: var(--font-label);
+      font-size: 13px;
+      font-weight: 700;
+      fill: var(--on-surface);
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+    .k6-mine-badge-bg {
+      fill: var(--primary-container);
+      stroke: var(--outline);
+      stroke-width: 1.2;
+      pointer-events: none;
+    }
+    .k6-mine-badge-text {
+      font-family: var(--font-label);
+      font-size: 9.5px;
+      font-weight: 700;
+      fill: var(--on-primary-container);
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .board-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      padding-top: var(--space-xs);
+      border-top: var(--card-border);
+      font-size: 0.78rem;
+      color: var(--on-surface-variant);
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .swatch-line {
+      width: 18px;
+      height: 0;
+      display: inline-block;
+      border-top: 3px solid var(--border-soft);
+    }
+    .swatch-line.is-red { border-top-color: var(--data-4); border-top-width: 4px; }
+    .swatch-line.is-blue { border-top-color: var(--data-1); border-top-width: 4px; }
+    .swatch-line.is-double { border-top-color: var(--data-2); border-top-style: dashed; border-top-width: 3px; }
+    .swatch-line.is-single-r { border-top-color: var(--data-4); border-top-style: dotted; border-top-width: 3px; }
+    .swatch-line.is-single-b { border-top-color: var(--data-1); border-top-style: dotted; border-top-width: 3px; }
+
+    /* Human Takeover Color Picker Popover (Inline) */
+    .takeover-panel {
+      margin-top: var(--space-sm);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--surface-container);
+      border-left: 3px solid var(--secondary);
+      border-radius: var(--rounded);
+      display: none;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .takeover-panel.is-visible { display: flex; }
+
+    /* Timeline Player */
+    .timeline-bar {
+      margin-top: var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--surface-container);
+      border-radius: var(--rounded);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .timeline-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .tl-btn {
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0 0.55rem;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--rounded);
+      background: var(--surface-container-low);
+      font-family: var(--font-label);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .tl-btn:hover:not(:disabled) { background: var(--surface-container-high); }
+    .tl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .tl-slider {
+      flex: 1 1 120px;
+      min-height: 44px;
+      accent-color: var(--secondary);
+    }
+
+    /* Telemetry KPI Strip */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: var(--space-sm);
+    }
+    .kpi-tile {
+      background: var(--surface-container-low);
+      border: var(--card-border);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-sm) var(--space-md);
+    }
+    .kpi-label {
+      font-family: var(--font-label);
+      font-size: 0.72rem;
+      color: var(--on-surface-variant);
+      display: block;
+    }
+    .kpi-value {
+      font-family: var(--font-headline);
+      font-weight: 700;
+      font-size: 1.55rem;
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+      color: var(--on-surface);
+      margin-top: 0.15rem;
+    }
+    .kpi-sub {
+      font-family: var(--font-label);
+      font-size: 0.72rem;
+      color: var(--secondary);
+      margin-top: 0.15rem;
+    }
+
+    /* X-Ray & Verdict Banner */
+    .verdict-banner {
+      margin-top: var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--rounded);
+      border-left: 4px solid var(--secondary);
+      background: var(--surface-container);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    .verdict-banner.is-p1 { border-left-color: var(--data-4); }
+    .verdict-banner.is-p2 { border-left-color: var(--data-1); }
+
+    .xray-box {
+      margin-top: var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--background);
+      border: var(--card-border);
+      border-radius: var(--rounded);
+    }
+    .xray-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: var(--space-xs);
+    }
+
+    /* Transcript Table */
+    .transcript-header {
+      margin-top: var(--space-md);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    .table-scroll {
+      margin-top: var(--space-xs);
+      max-height: 360px;
+      overflow-y: auto;
+      border: var(--card-border);
+      border-radius: var(--rounded);
+      background: var(--surface-container-low);
+    }
+    table.dossier-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+      font-variant-numeric: tabular-nums;
+    }
+    table.dossier-table thead th {
+      position: sticky;
+      top: 0;
+      background: var(--surface-container);
+      border-bottom: var(--section-rule);
+      padding: 0.45rem 0.6rem;
+      text-align: left;
+      font-family: var(--font-label);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--on-surface);
+      z-index: 1;
+    }
+    table.dossier-table tbody td {
+      padding: 0.42rem 0.6rem;
+      border-bottom: var(--card-border);
+      vertical-align: middle;
+    }
+    table.dossier-table tbody tr {
+      cursor: pointer;
+      transition: background-color var(--dur-micro) var(--ease-out);
+    }
+    table.dossier-table tbody tr:hover { background: var(--surface-container); }
+    table.dossier-table tbody tr.is-current {
+      background: var(--tag-warm);
+      font-weight: 600;
+    }
+
+    .copy-feedback {
+      margin-top: var(--space-xs);
+      font-family: var(--font-label);
+      font-size: 0.78rem;
+      color: var(--positive);
+      min-height: 1.2em;
+    }
+    .copy-fallback-box {
+      margin-top: var(--space-xs);
+      display: none;
+    }
+    .copy-fallback-box.is-visible { display: block; }
+    .copy-fallback-box textarea {
+      width: 100%;
+      min-height: 90px;
+      font-family: var(--font-label);
+      font-size: 0.75rem;
+      padding: var(--space-xs);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--rounded);
+      background: var(--background);
+    }
+
+    /* Section 02: Monte Carlo 10,000 Lab */
+    .mc-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      align-items: end;
+      margin-bottom: var(--space-md);
+    }
+    .progress-wrap {
+      margin-bottom: var(--space-md);
+      display: none;
+    }
+    .progress-wrap.is-visible { display: block; }
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: var(--surface-container-high);
+      border-radius: var(--badge-radius);
+      overflow: hidden;
+      margin-top: 0.35rem;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--secondary);
+      transition: width var(--dur-micro) linear;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+      gap: var(--space-lg);
+    }
+    .chart-card {
+      background: var(--surface-container-low);
+      border: var(--card-border);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .chart-title {
+      font-family: var(--font-headline);
+      font-weight: 600;
+      font-size: 1.05rem;
+      margin: 0;
+    }
+    .chart-sub {
+      font-family: var(--font-label);
+      font-size: 0.74rem;
+      color: var(--on-surface-variant);
+    }
+    .chart-svg-box {
+      width: 100%;
+      min-height: 220px;
+    }
+    .chart-svg-box svg {
+      width: 100%;
+      height: 220px;
+      display: block;
+    }
+
+    /* Section 03: 9x9 Matrix Heatmap */
+    .matrix-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-md);
+    }
+    .matrix-scroll {
+      overflow-x: auto;
+      border: var(--card-border);
+      border-radius: var(--rounded-lg);
+      background: var(--surface-container-low);
+    }
+    table.matrix-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+    table.matrix-table th, table.matrix-table td {
+      border: 1px solid var(--outline-variant);
+      padding: 0.45rem 0.35rem;
+      text-align: center;
+      font-family: var(--font-label);
+      font-size: 0.76rem;
+    }
+    table.matrix-table thead th {
+      background: var(--surface-container);
+      font-weight: 600;
+      color: var(--on-surface);
+      border-bottom: var(--section-rule);
+    }
+    table.matrix-table tbody th {
+      background: var(--surface-container);
+      text-align: left;
+      padding-left: 0.6rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    td.matrix-cell {
+      cursor: pointer;
+      font-weight: 600;
+      transition: outline var(--dur-micro) var(--ease-out);
+    }
+    td.matrix-cell:hover {
+      outline: 2px solid var(--outline);
+      outline-offset: -2px;
+    }
+    td.matrix-cell.is-selected {
+      outline: 2.5px solid var(--primary-container);
+      outline-offset: -2px;
+    }
+    .matrix-cell-sub {
+      display: block;
+      font-size: 0.64rem;
+      font-weight: 400;
+      opacity: 0.82;
+    }
+
+    /* Section 04: 9 Strategies Compendium */
+    .strategy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr));
+      gap: var(--space-md);
+    }
+    .strategy-card {
+      background: var(--surface-container-low);
+      border: var(--card-border);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .strategy-card.is-s9 {
+      border-top: 3px solid var(--primary-container);
+    }
+    .strategy-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-xs);
+    }
+    .strategy-card-title {
+      font-family: var(--font-headline);
+      font-weight: 600;
+      font-size: 1.02rem;
+      margin: 0;
+    }
+
+    .aside-box {
+      background: var(--surface-container);
+      border-top: var(--section-rule);
+      padding: var(--space-md) var(--space-lg);
+      border-radius: var(--rounded);
+      font-size: 0.875rem;
+      color: var(--on-surface-variant);
+    }
+
+    /* Responsive Breakpoints */
+    @media (max-width: 960px) {
+      .control-ribbon { grid-template-columns: 1fr; }
+      .duel-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .page-grid { padding: var(--space-md) var(--space-sm) var(--space-xl); gap: var(--space-lg); }
+      .matchup-row { grid-template-columns: 1fr; }
+      .figure-card { padding: var(--space-sm) var(--space-md); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-grid">
+
+    <!-- Masthead -->
+    <header>
+      <div class="dossier-bar">
+        <span class="dossier-pill">GRAPH THEORY LAB · K₆ RAMSEY</span>
+        <span class="dossier-meta">R(3,3) = 6 · 15 EDGES · 20 TRIANGLES · ZERO-DRAW THEOREM</span>
+      </div>
+      <h1 class="masthead-title">Ramsey 避讓遊戲九大策略對決、雙規則萬局模擬與人腦接管實驗室</h1>
+      <p class="standfirst">從 Erdős–Selfridge 勢能防禦到可調深度 Minimax α-β 搜尋：即時對比「自由選色」與「傳統一人一色 (Sim)」的賽局相變與先後手不對稱性。</p>
+    </header>
+
+    <!-- Global Control Ribbon -->
+    <section class="control-ribbon" aria-label="全域規則與 S9 演算法控制台">
+      <div>
+        <span class="control-group-title">01 / 賽局規則模式（即時連動棋盤、AI 策略與 9×9 矩陣）</span>
+        <div class="segmented-group" role="group" aria-label="規則模式選擇">
+          <button type="button" class="seg-btn is-active" id="btn-rule-gen" onclick="setRuleMode('generalized')">
+            <span>自由選色（Generalized Ramsey）</span>
+            <span class="sub-note">雙色任意塗・允許跨色借色解圍</span>
+          </button>
+          <button type="button" class="seg-btn" id="btn-rule-classic" onclick="setRuleMode('classic')">
+            <span>傳統一人一色（Classic Sim）</span>
+            <span class="sub-note">P1 限塗紅・P2 限塗藍・經典 P2 必勝定理</span>
+          </button>
+        </div>
+        <div class="rule-callout" id="rule-callout-text">
+          目前規則：<strong>自由選色 (Generalized Ramsey)</strong>。每位玩家每手皆可自由選擇塗紅或塗藍；當某條未著色邊同時成為紅方與藍方地雷時，即構成「雙向地雷 (M)」，誰畫誰死。
+        </div>
+      </div>
+
+      <div>
+        <span class="control-group-title">02 / S9 核心引擎：Minimax α-β 搜尋深度調節器（無偏見 Negamax + 30-bit 轉置表）</span>
+        <div class="segmented-group" role="group" aria-label="S9 搜尋深度選擇">
+          <button type="button" class="seg-btn" id="btn-depth-2" onclick="setS9Preset('d2')">
+            <span>深度 2｜極速預覽</span>
+            <span class="sub-note">瞬時矩陣・&lt;0.2 ms/手</span>
+          </button>
+          <button type="button" class="seg-btn is-active" id="btn-depth-4" onclick="setS9Preset('d4')">
+            <span>深度 4｜均衡戰術</span>
+            <span class="sub-note">戰術中盤・~1 ms/手</span>
+          </button>
+          <button type="button" class="seg-btn" id="btn-depth-6" onclick="setS9Preset('d6')">
+            <span>深度 6｜深層推演</span>
+            <span class="sub-note">深層前瞻・~6 ms/手</span>
+          </button>
+          <button type="button" class="seg-btn" id="btn-depth-exact" onclick="setS9Preset('exact')">
+            <span>殘局完美窮舉</span>
+            <span class="sub-note">D6 + 剩餘 ≤ 8 步直接求解</span>
+          </button>
+        </div>
+        <div class="depth-status-strip" id="s9-status-strip">
+          <span class="mono-badge is-gold" id="badge-s9-mode">目前設定：深度 4（均衡戰術）</span>
+          <span class="mono-badge" id="badge-s9-tt">TT 轉置表：0 筆快取</span>
+          <span class="mono-badge" id="badge-s9-perf">最近推演：尚未執行</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 01: Interactive Duel Lab & Human Takeover -->
+    <section aria-labelledby="sec1-heading">
+      <div class="dossier-bar">
+        <span class="index-num">01</span>
+        <h2 class="section-heading" id="sec1-heading">互動式拓撲棋盤、單局推演與人腦接管實驗室</h2>
+      </div>
+      <p class="section-lead">拖曳頂點或切換幾何佈局觀察地雷拓撲，透過時間軸回溯任意手數，並隨時點擊「從此步開始人腦接管」親自與指定策略對弈。</p>
+
+      <div class="duel-grid">
+        <!-- Left Column: Board & Controls -->
+        <div class="figure-card">
+          <div class="matchup-row">
+            <div class="field-col">
+              <label class="field-label" for="sel-p1">先手策略（P1）</label>
+              <select class="field-select" id="sel-p1" onchange="onStrategySelectChange()"></select>
+            </div>
+            <div class="field-col">
+              <label class="field-label" for="sel-p2">後手策略（P2）</label>
+              <select class="field-select" id="sel-p2" onchange="onStrategySelectChange()"></select>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button type="button" class="btn btn-primary" onclick="runNewDuel()">開始新對戰</button>
+            <button type="button" class="btn" onclick="swapPlayers()">交換先後手</button>
+            <button type="button" class="btn btn-accent" id="btn-human-takeover" onclick="toggleHumanTakeover()">從此步開始人腦接管</button>
+          </div>
+
+          <!-- Board Stage -->
+          <div class="board-stage">
+            <div class="board-toolbar">
+              <span class="mono-badge" id="board-ply-badge">手數 0 / 15</span>
+              <div class="segmented-group">
+                <button type="button" class="btn" style="min-height:36px;padding:0.25rem 0.6rem;font-size:0.78rem;" id="btn-layout-hex" onclick="setBoardLayout('hex')">正六邊形</button>
+                <button type="button" class="btn" style="min-height:36px;padding:0.25rem 0.6rem;font-size:0.78rem;" id="btn-layout-force" onclick="setBoardLayout('force')">力導向拓撲</button>
+              </div>
+            </div>
+
+            <div class="board-svg-wrap" id="k6-svg-wrap">
+              <svg class="k6-svg" id="k6-svg" viewBox="0 0 440 380" role="img" aria-label="K6 Ramsey 避讓遊戲互動棋盤"></svg>
+            </div>
+
+            <!-- Inline Human Takeover Panel -->
+            <div class="takeover-panel" id="takeover-panel">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                <strong id="takeover-prompt">人腦接管模式已啟動：請點選畫布上的邊，或依序點擊兩個頂點連線。</strong>
+                <button type="button" class="btn" style="min-height:36px;padding:0.2rem 0.6rem;font-size:0.78rem;" onclick="exitHumanTakeover()">結束接管</button>
+              </div>
+              <div id="takeover-color-choice" style="display:none;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-top:0.25rem;">
+                <span class="mono-badge" id="takeover-edge-label">已選邊 (A, B)</span>
+                <button type="button" class="btn" id="btn-paint-red" style="min-height:38px;border-color:var(--data-4);color:var(--data-4);" onclick="commitHumanColor(1)">塗成紅色 (Red)</button>
+                <button type="button" class="btn" id="btn-paint-blue" style="min-height:38px;border-color:var(--data-1);color:var(--data-1);" onclick="commitHumanColor(2)">塗成藍色 (Blue)</button>
+                <button type="button" class="btn" style="min-height:38px;" onclick="cancelPendingEdge()">取消重選</button>
+              </div>
+              <div class="mono-badge" id="takeover-status-msg" style="align-self:flex-start;">輪到您落子</div>
+            </div>
+
+            <div class="board-legend">
+              <span class="legend-item"><span class="swatch-line is-red"></span>紅邊 (Red)</span>
+              <span class="legend-item"><span class="swatch-line is-blue"></span>藍邊 (Blue)</span>
+              <span class="legend-item"><span class="swatch-line is-double"></span>雙向地雷 (M・誰畫誰死)</span>
+              <span class="legend-item"><span class="swatch-line is-single-r"></span>單向紅雷</span>
+              <span class="legend-item"><span class="swatch-line is-single-b"></span>單向藍雷</span>
+              <span class="legend-item"><span class="swatch-line"></span>安全生路</span>
+            </div>
+          </div>
+
+          <!-- Timeline Player -->
+          <div class="timeline-bar" aria-label="棋局時間軸播放器">
+            <div class="timeline-controls">
+              <button type="button" class="tl-btn" onclick="stepTimeline('start')" title="回到開局" aria-label="回到開局">|&lt;&lt;</button>
+              <button type="button" class="tl-btn" onclick="stepTimeline('prev')" title="上一步" aria-label="上一步">&lt;</button>
+              <button type="button" class="tl-btn" id="btn-play-toggle" onclick="togglePlayback()" title="播放或暫停" aria-label="播放或暫停">播放</button>
+              <button type="button" class="tl-btn" onclick="stepTimeline('next')" title="下一步" aria-label="下一步">&gt;</button>
+              <button type="button" class="tl-btn" onclick="stepTimeline('end')" title="跳至終局" aria-label="跳至終局">&gt;&gt;|</button>
+              <input type="range" class="tl-slider" id="timeline-slider" min="0" max="15" value="0" aria-label="手順進度滑桿" oninput="onTimelineSlider(this.value)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Telemetry, X-Ray, Transcript -->
+        <div class="figure-card">
+          <div class="kpi-grid">
+            <div class="kpi-tile">
+              <span class="kpi-label">當前雙地雷 M</span>
+              <div class="kpi-value" id="kpi-m-val">0</div>
+              <div class="kpi-sub" id="kpi-m-sub">紅雷 0 · 藍雷 0</div>
+            </div>
+            <div class="kpi-tile">
+              <span class="kpi-label">剩餘安全生路</span>
+              <div class="kpi-value" id="kpi-safe-val">15</div>
+              <div class="kpi-sub" id="kpi-safe-sub">雙色皆安 15 條</div>
+            </div>
+            <div class="kpi-tile">
+              <span class="kpi-label">當前執手 / 狀態</span>
+              <div class="kpi-value" id="kpi-turn-val" style="font-size:1.25rem;">P1 先手</div>
+              <div class="kpi-sub" id="kpi-turn-sub">待命推演中</div>
+            </div>
+            <div class="kpi-tile">
+              <span class="kpi-label">S9 殘局評估透視</span>
+              <div class="kpi-value" id="kpi-eval-val" style="font-size:1.25rem;">--</div>
+              <div class="kpi-sub" id="kpi-eval-sub">點擊下方按鈕即時剖析</div>
+            </div>
+          </div>
+
+          <div class="verdict-banner" id="verdict-banner">
+            <span id="verdict-text">對局載入中…</span>
+            <button type="button" class="btn" style="min-height:38px;padding:0.25rem 0.7rem;font-size:0.8rem;" onclick="inspectCurrentWithS9()">S9 即時剖析此盤面</button>
+          </div>
+
+          <div class="xray-box">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+              <span class="field-label">拓撲地雷透視（依當前手數盤面即時分類）</span>
+              <span class="mono-badge" id="xray-hint-badge">15 條未著色邊</span>
+            </div>
+            <div class="xray-chips" id="xray-chips"></div>
+          </div>
+
+          <div class="transcript-header">
+            <span class="field-label">完整棋譜與戰術評註（點選任一列可跳轉該手盤面）</span>
+            <button type="button" class="btn btn-primary" style="min-height:38px;padding:0.25rem 0.85rem;font-size:0.82rem;" onclick="copyTranscriptToClipboard()">一鍵複製完整棋譜 (Excel TSV)</button>
+          </div>
+          <div class="copy-feedback" id="copy-feedback" role="status" aria-live="polite"></div>
+          <div class="copy-fallback-box" id="copy-fallback-box">
+            <label class="field-label" for="copy-fallback-text">剪貼簿權限受限，請按 Ctrl+C / Cmd+C 複製下方 TSV 棋譜：</label>
+            <textarea id="copy-fallback-text" readonly></textarea>
+          </div>
+
+          <div class="table-scroll">
+            <table class="dossier-table">
+              <thead>
+                <tr>
+                  <th>手數</th>
+                  <th>執手</th>
+                  <th>著手</th>
+                  <th>顏色</th>
+                  <th>M</th>
+                  <th>生路</th>
+                  <th>關鍵轉折評註</th>
+                </tr>
+              </thead>
+              <tbody id="transcript-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 02: 10,000-Game Monte Carlo Lab -->
+    <section aria-labelledby="sec2-heading">
+      <div class="dossier-bar">
+        <span class="index-num">02</span>
+        <h2 class="section-heading" id="sec2-heading">萬局蒙地卡羅統計實驗室（先後手勝率・M 分佈・手數曲線）</h2>
+      </div>
+      <p class="section-lead">針對任意策略對決進行大規模統計實驗，驗證經典 Sim 後手優勢、自由選色相變與雙地雷 M 峰值特徵。當對戰包含 S9 時，將即時套用上方所選的 S9 搜尋深度。</p>
+
+      <div class="figure-card">
+        <div class="mc-controls">
+          <div class="field-col" style="flex:1 1 180px;">
+            <label class="field-label" for="mc-p1">先手策略（P1）</label>
+            <select class="field-select" id="mc-p1"></select>
+          </div>
+          <div class="field-col" style="flex:1 1 180px;">
+            <label class="field-label" for="mc-p2">後手策略（P2）</label>
+            <select class="field-select" id="mc-p2"></select>
+          </div>
+          <div class="field-col" style="flex:0 1 160px;">
+            <label class="field-label" for="mc-count">模擬局數（N）</label>
+            <select class="field-select" id="mc-count">
+              <option value="1000">1,000 局（快速驗證）</option>
+              <option value="5000">5,000 局（標準樣本）</option>
+              <option value="10000" selected>10,000 局（萬局實驗）</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-mc-run" onclick="startMonteCarlo()">執行萬局統計模擬</button>
+          <button type="button" class="btn" id="btn-mc-stop" onclick="stopMonteCarlo()" disabled>中止模擬</button>
+        </div>
+
+        <div class="progress-wrap" id="mc-progress-wrap">
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-label);font-size:0.78rem;">
+            <span id="mc-progress-label">模擬進度：0 / 10,000</span>
+            <span id="mc-progress-time">耗時：0.00 s</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="mc-progress-fill"></div></div>
+        </div>
+
+        <div class="kpi-grid" style="margin-bottom:var(--space-md);">
+          <div class="kpi-tile">
+            <span class="kpi-label">先手勝率（P1）</span>
+            <div class="kpi-value" id="mc-kpi-p1" style="color:var(--data-4);">--</div>
+            <div class="kpi-sub" id="mc-kpi-p1-n">0 勝</div>
+          </div>
+          <div class="kpi-tile">
+            <span class="kpi-label">後手勝率（P2）</span>
+            <div class="kpi-value" id="mc-kpi-p2" style="color:var(--data-1);">--</div>
+            <div class="kpi-sub" id="mc-kpi-p2-n">0 勝</div>
+          </div>
+          <div class="kpi-tile">
+            <span class="kpi-label">平均雙地雷峰值 M</span>
+            <div class="kpi-value" id="mc-kpi-m">--</div>
+            <div class="kpi-sub" id="mc-kpi-m-max">最高 M = 0</div>
+          </div>
+          <div class="kpi-tile">
+            <span class="kpi-label">平均終局手數 &amp; 耗時</span>
+            <div class="kpi-value" id="mc-kpi-len">--</div>
+            <div class="kpi-sub" id="mc-kpi-elapsed">尚未執行</div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3 class="chart-title">先後手勝率對比長條圖</h3>
+            <span class="chart-sub">P1 WIN RATE VS P2 WIN RATE (%)</span>
+            <div class="chart-svg-box" id="chart-winrate"></div>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">雙地雷峰值 M 頻率直方圖</h3>
+            <span class="chart-sub">MAX DOUBLE-MINE COUNT DISTRIBUTION (M = 0 ~ 6)</span>
+            <div class="chart-svg-box" id="chart-m-hist"></div>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">終局手數分佈折線圖</h3>
+            <span class="chart-sub">GAME LENGTH PLY DISTRIBUTION (PLY 5 ~ 15)</span>
+            <div class="chart-svg-box" id="chart-ply-line"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 03: 9x9 Strategy Matrix Heatmap -->
+    <section aria-labelledby="sec3-heading">
+      <div class="dossier-bar">
+        <span class="index-num">03</span>
+        <h2 class="section-heading" id="sec3-heading">9×9 全策略對決矩陣熱力表（81 種組合實戰勝率）</h2>
+      </div>
+      <p class="section-lead">橫列為先手（P1），直欄為後手（P2），數值代表先手勝率 (%)。點擊任意儲存格可直接將該對戰組合載入上方單局棋盤推演。</p>
+
+      <div class="figure-card">
+        <div class="matrix-toolbar">
+          <div class="segmented-group">
+            <button type="button" class="btn btn-primary" id="btn-matrix-fast" onclick="runMatrixScan('fast')">極速掃描（每格 100 局 · 瞬時矩陣）</button>
+            <button type="button" class="btn btn-accent" id="btn-matrix-deep" onclick="runMatrixScan('deep')">高精度深層掃描（每格 400 局 · 套用當前 S9 深度）</button>
+            <button type="button" class="btn" id="btn-matrix-stop" onclick="stopMatrixScan()" disabled>停止掃描</button>
+          </div>
+          <span class="mono-badge" id="matrix-status-badge">就緒：尚未掃描</span>
+        </div>
+
+        <div class="progress-wrap" id="matrix-progress-wrap">
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-label);font-size:0.78rem;">
+            <span id="matrix-progress-label">掃描進度：0 / 81 組合</span>
+            <span id="matrix-progress-time">耗時：0.00 s</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="matrix-progress-fill"></div></div>
+        </div>
+
+        <div class="matrix-scroll">
+          <table class="matrix-table" id="matrix-table">
+            <thead id="matrix-thead"></thead>
+            <tbody id="matrix-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="aside-box" style="margin-top:var(--space-md);">
+          <strong>判讀指南：</strong>
+          格子色調愈偏向<span style="color:var(--data-4);font-weight:700;">磚紅色（&gt;50%）</span>代表先手（P1）佔優；愈偏向<span style="color:var(--data-1);font-weight:700;">深青藍（&lt;50%）</span>代表後手（P2）強勢反制。切換至「傳統一人一色 (Classic Sim)」後再掃描，可觀察經典 $K_6$ 後手理論優勢如何體現在 S9 直欄的極低 P1 勝率上。
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 04: 9 Strategies Compendium -->
+    <section aria-labelledby="sec4-heading">
+      <div class="dossier-bar">
+        <span class="index-num">04</span>
+        <h2 class="section-heading" id="sec4-heading">九大圖論與博弈演算法架構說明（S1 ~ S9）</h2>
+      </div>
+      <div class="strategy-grid" id="strategy-cards-grid"></div>
+
+      <footer class="aside-box" style="margin-top:var(--space-lg);">
+        <strong>學術參考與資料來源：</strong>
+        Józef Beck, <em>Combinatorial Games: Tic-Tac-Toe Theory</em>（Erdős–Selfridge 勢能防禦法與位置賽局理論）；
+        Wolfgang Slany, <em>Theoretical Computer Science 289 (2002)</em>（Sim 與圖論 Ramsey 避讓賽局之 PSPACE 複雜度與箭號定理 $K_6 \to K_3$）；
+        莫斯科維奇《生活中的數學遊戲》暨科展專題《決戰一瞬間：Ramsey Game 的推廣》（自由選色規則定義）。
+      </footer>
+    </section>
+  </div>
+
+  <api-shim></api-shim>
+  <script>
+  // =========================================================================
+  // 1. K6 GRAPH CONSTANTS & BITMASK PRECOMPUTATION
+  // =========================================================================
+  const VERTEX_NAMES = [`A`, `B`, `C`, `D`, `E`, `F`];
+  const EDGES = [
+    [0, 1], [0, 2], [0, 3], [0, 4], [0, 5],
+    [1, 2], [1, 3], [1, 4], [1, 5],
+    [2, 3], [2, 4], [2, 5],
+    [3, 4], [3, 5],
+    [4, 5]
+  ];
+  const EDGE_IDX = Array.from({ length: 6 }, () => new Int8Array(6).fill(-1));
+  const EDGE_MASK = new Int32Array(15);
+  for (let e = 0; e < 15; e++) {
+    const u = EDGES[e][0];
+    const v = EDGES[e][1];
+    EDGE_IDX[u][v] = e;
+    EDGE_IDX[v][u] = e;
+    EDGE_MASK[e] = 1 << e;
+  }
+
+  // All 20 triangles in K6
+  const TRIS = [];
+  const TRI_MASKS = new Int32Array(20);
+  const EDGE_TRIS = Array.from({ length: 15 }, () => []);
+  const EDGE_PAIR_MASKS = Array.from({ length: 15 }, () => new Int32Array(4));
+  const EDGE_PAIR_PTR = new Int8Array(15);
+
+  for (let i = 0; i < 6; i++) {
+    for (let j = i + 1; j < 6; j++) {
+      for (let k = j + 1; k < 6; k++) {
+        const e1 = EDGE_IDX[i][j];
+        const e2 = EDGE_IDX[i][k];
+        const e3 = EDGE_IDX[j][k];
+        const mask = (1 << e1) | (1 << e2) | (1 << e3);
+        const tIdx = TRIS.length;
+        TRIS.push({ verts: [i, j, k], edges: [e1, e2, e3], mask });
+        TRI_MASKS[tIdx] = mask;
+        EDGE_TRIS[e1].push(tIdx);
+        EDGE_TRIS[e2].push(tIdx);
+        EDGE_TRIS[e3].push(tIdx);
+        EDGE_PAIR_MASKS[e1][EDGE_PAIR_PTR[e1]++] = mask ^ (1 << e1);
+        EDGE_PAIR_MASKS[e2][EDGE_PAIR_PTR[e2]++] = mask ^ (1 << e2);
+        EDGE_PAIR_MASKS[e3][EDGE_PAIR_PTR[e3]++] = mask ^ (1 << e3);
+      }
+    }
+  }
+
+  // Vertex incident edge masks & Antipodal mirror edges
+  const VERTEX_INCIDENT_MASK = new Int32Array(6);
+  for (let e = 0; e < 15; e++) {
+    VERTEX_INCIDENT_MASK[EDGES[e][0]] |= (1 << e);
+    VERTEX_INCIDENT_MASK[EDGES[e][1]] |= (1 << e);
+  }
+  const MIRROR_EDGE = new Int8Array(15);
+  const IS_DIAMETER = new Uint8Array(15);
+  for (let e = 0; e < 15; e++) {
+    const u = EDGES[e][0];
+    const v = EDGES[e][1];
+    const mu = (u + 3) % 6;
+    const mv = (v + 3) % 6;
+    MIRROR_EDGE[e] = EDGE_IDX[mu][mv];
+    IS_DIAMETER[e] = (MIRROR_EDGE[e] === e) ? 1 : 0;
+  }
+
+  // Bipartite K3,3 masks for S6
+  // Cut A: {0,1,2} vs {3,4,5}; Cut B: {0,2,4} vs {1,3,5}
+  let BIPARTITE_MASK_A = 0;
+  let BIPARTITE_MASK_B = 0;
+  for (let e = 0; e < 15; e++) {
+    const u = EDGES[e][0];
+    const v = EDGES[e][1];
+    if ((u < 3) !== (v < 3)) BIPARTITE_MASK_A |= (1 << e);
+    if ((u % 2) !== (v % 2)) BIPARTITE_MASK_B |= (1 << e);
+  }
+
+  // 15-bit Popcount lookup table
+  const POP15 = new Uint8Array(32768);
+  for (let i = 1; i < 32768; i++) {
+    POP15[i] = POP15[i >> 1] + (i & 1);
+  }
+
+  // Fast bitwise helpers
+  function isMine(colorMask, e) {
+    const p = EDGE_PAIR_MASKS[e];
+    return (colorMask & p[0]) === p[0] ||
+           (colorMask & p[1]) === p[1] ||
+           (colorMask & p[2]) === p[2] ||
+           (colorMask & p[3]) === p[3];
+  }
+
+  function findCompletedTriangle(colorMask, e) {
+    const tris = EDGE_TRIS[e];
+    const p = EDGE_PAIR_MASKS[e];
+    for (let i = 0; i < 4; i++) {
+      if ((colorMask & p[i]) === p[i]) return tris[i];
+    }
+    return -1;
+  }
+
+  function countVertexDeg(colorMask, v) {
+    return POP15[colorMask & VERTEX_INCIDENT_MASK[v]];
+  }
+
+  function analyzeBoardState(redMask, blueMask, isClassic, turn) {
+    const occ = redMask | blueMask;
+    const rem = 15 - POP15[occ];
+    let doubleMines = 0;
+    let redOnlyMines = 0;
+    let blueOnlyMines = 0;
+    let dualSafe = 0;
+    let p1Safe = 0;
+    let p2Safe = 0;
+    const edgeTags = new Array(15);
+
+    for (let e = 0; e < 15; e++) {
+      if (occ & (1 << e)) {
+        edgeTags[e] = (redMask & (1 << e)) ? `played-red` : `played-blue`;
+        continue;
+      }
+      const rM = isMine(redMask, e);
+      const bM = isMine(blueMask, e);
+      if (rM && bM) {
+        doubleMines++;
+        edgeTags[e] = `double-mine`;
+      } else if (rM) {
+        redOnlyMines++;
+        p2Safe++;
+        edgeTags[e] = `red-mine`;
+      } else if (bM) {
+        blueOnlyMines++;
+        p1Safe++;
+        edgeTags[e] = `blue-mine`;
+      } else {
+        dualSafe++;
+        p1Safe++;
+        p2Safe++;
+        edgeTags[e] = `safe`;
+      }
+    }
+
+    const totalRedMines = doubleMines + redOnlyMines;
+    const totalBlueMines = doubleMines + blueOnlyMines;
+    const playableGeneralized = rem - doubleMines;
+    const playableForCurrent = isClassic ? (turn === 0 ? p1Safe : p2Safe) : playableGeneralized;
+
+    return {
+      occ,
+      rem,
+      doubleMines,
+      redOnlyMines,
+      blueOnlyMines,
+      totalRedMines,
+      totalBlueMines,
+      dualSafe,
+      p1Safe,
+      p2Safe,
+      playableGeneralized,
+      playableForCurrent,
+      edgeTags
+    };
+  }
+
+  // =========================================================================
+  // 2. STRATEGY DEFINITIONS (S1 ~ S9)
+  // =========================================================================
+  const STRATEGIES = [
+    {
+      id: 0,
+      code: `S1`,
+      name: `盲目避雷`,
+      short: `S1 盲目避雷`,
+      badge: `隨機基準線`,
+      desc: `從所有不立即構成單色三角形的合法安全邊中均勻隨機落子；僅在無安全生路時被迫自殺。作為衡量其他演算法超額勝率的基準線。`
+    },
+    {
+      id: 1,
+      code: `S2`,
+      name: `拆角防守法`,
+      short: `S2 拆角防守`,
+      badge: `凍結 M ≤ 1`,
+      desc: `主動破壞場上既有的同色 V 型角（二缺一三角形），在自由選色時善用異色蓋角、在傳統 Sim 中優先切斷對手 V 角，極力將雙地雷壓制於 M ≤ 1。`
+    },
+    {
+      id: 2,
+      code: `S3`,
+      name: `構造 P4 雙地雷`,
+      short: `S3 構造 P4`,
+      badge: `搶攻 M = 2`,
+      desc: `積極延伸長度為 3 條邊的同色路徑（P4），讓兩個 V 型角於未著色邊上交會，企圖製造複數雙向地雷（M ≥ 2）以剝奪對手安全步數。`
+    },
+    {
+      id: 3,
+      code: `S4`,
+      name: `兩階段動態地雷計算`,
+      short: `S4 動態地雷`,
+      badge: `借色反殺嗅覺`,
+      desc: `前 6 手穩健鋪陳圖形連通性；進入殘局後全盤掃描每一手後的雙地雷 M 與安全生路奇偶性，具備一步迫殺（對手生路歸零）與借色反殺的嗅覺。`
+    },
+    {
+      id: 4,
+      code: `S5`,
+      name: `度數極小化策略 (Δ ≤ 2)`,
+      short: `S5 度數極小`,
+      badge: `源頭扼殺 V 角`,
+      desc: `嚴格約束每個頂點的同色度數 Δ ≤ 2，並最小化頂點度數平方和，從組合源頭減少 V 型角產生數量，延緩自身地雷網的形成。`
+    },
+    {
+      id: 5,
+      code: `S6`,
+      name: `二分圖著色策略 (K3,3)`,
+      short: `S6 二分圖`,
+      badge: `數學無奇環`,
+      desc: `將頂點劃分為兩個互補的 3-3 二分切割集（K3,3），由於二分圖不含任何奇環，自身顏色在設計集合內數學上絕對不可能構成三角形。`
+    },
+    {
+      id: 6,
+      code: `S7`,
+      name: `勢能函數防禦 (Beck / E-S)`,
+      short: `S7 勢能防禦`,
+      badge: `指數危險權重`,
+      desc: `實作 Erdős–Selfridge 與 Beck 的 2 的冪次勢能函數，加總全盤 20 個未死三角形的危險權重 2^(k-3)，貪婪挑選使整體勢能降幅最大的安全著手。`
+    },
+    {
+      id: 7,
+      code: `S8`,
+      name: `對稱鏡射策略`,
+      short: `S8 對稱鏡射`,
+      badge: `六邊形反演`,
+      desc: `利用正六邊形的中心反演對稱 σ(u) = (u+3) mod 6，針對對手前一手 (u,v) 優先落子於鏡像對邊 (u+3, v+3) 進行對稱抵消。`
+    },
+    {
+      id: 8,
+      code: `S9`,
+      name: `極小極大完全回溯`,
+      short: `S9 Minimax α-β`,
+      badge: `可調深度 + 窮舉`,
+      desc: `結合 30-bit 位元遮罩、Flat Int32 轉置表、無偏見 Negamax α-β 剪枝與殘局完美窮舉（≤8步直接求解），為客觀公正的賽局推演核心。`
+    }
+  ];
+
+  // =========================================================================
+  // 3. S9 MINIMAX ALPHA-BETA ENGINE WITH 30-BIT TT & CONFIGURABLE DEPTH
+  // =========================================================================
+  const TT_BITS = 20;
+  const TT_SIZE = 1 << TT_BITS;
+  const TT_MASK = TT_SIZE - 1;
+  const TT_KEY = new Int32Array(TT_SIZE);   // stores (redMask << 15 | blueMask) + 1
+  const TT_VAL = new Int32Array(TT_SIZE);
+  const TT_INFO = new Int32Array(TT_SIZE);  // bits: 0..1 flag, 2..6 depth, 7..12 moveCode+1
+  let ttCachedCount = 0;
+  let ttIsClassic = false;
+
+  function clearTT(isClassicMode) {
+    TT_KEY.fill(0);
+    ttCachedCount = 0;
+    ttIsClassic = isClassicMode;
+  }
+
+  function ttHash(key) {
+    return ((Math.imul(key, 0x9e3779b1) >>> (32 - TT_BITS)) & TT_MASK);
+  }
+
+  // Unbiased static evaluation from side-to-move's perspective
+  function evaluateS9(redMask, blueMask, isClassic, turn, occ) {
+    if (isClassic) {
+      const myMask = (turn === 0) ? redMask : blueMask;
+      const oppMask = (turn === 0) ? blueMask : redMask;
+      let mySafe = 0;
+      let oppSafe = 0;
+      for (let e = 0; e < 15; e++) {
+        if (occ & (1 << e)) continue;
+        if (!isMine(myMask, e)) mySafe++;
+        if (!isMine(oppMask, e)) oppSafe++;
+      }
+      let myDanger = 0;
+      let oppDanger = 0;
+      for (let t = 0; t < 20; t++) {
+        const tm = TRI_MASKS[t];
+        const mHas = myMask & tm;
+        const oHas = oppMask & tm;
+        if (!oHas && mHas) {
+          const cnt = POP15[mHas];
+          myDanger += (cnt === 2) ? 14 : 2;
+        } else if (!mHas && oHas) {
+          const cnt = POP15[oHas];
+          oppDanger += (cnt === 2) ? 14 : 2;
+        }
+      }
+      return (mySafe - oppSafe) * 28 + (oppDanger - myDanger) * 4;
+    } else {
+      // Generalized Ramsey: symmetric evaluation based on playable edges, parity, and mine structure
+      let doubleM = 0;
+      let singleM = 0;
+      let dualSafe = 0;
+      for (let e = 0; e < 15; e++) {
+        if (occ & (1 << e)) continue;
+        const rM = isMine(redMask, e);
+        const bM = isMine(blueMask, e);
+        if (rM && bM) doubleM++;
+        else if (rM || bM) singleM++;
+        else dualSafe++;
+      }
+      const playable = singleM + dualSafe;
+      // Odd number of playable edges favors side-to-move if singleM is low; singleM gives double-mine creation tempo
+      const parityTerm = (playable & 1) ? 18 : -18;
+      // Count open triangles
+      let twoEdgeThreats = 0;
+      for (let t = 0; t < 20; t++) {
+        const tm = TRI_MASKS[t];
+        const rHas = redMask & tm;
+        const bHas = blueMask & tm;
+        if (!bHas && POP15[rHas] === 2) twoEdgeThreats++;
+        if (!rHas && POP15[bHas] === 2) twoEdgeThreats++;
+      }
+      return parityTerm + singleM * 4 - doubleM * 2 + (twoEdgeThreats & 1 ? 6 : -6);
+    }
+  }
+
+  let s9NodeCounter = 0;
+  let s9NodeLimit = 1200000;
+  let s9Aborted = false;
+
+  function negamaxS9(redMask, blueMask, depth, alpha, beta, isClassic, exactLimit) {
+    s9NodeCounter++;
+    if ((s9NodeCounter & 4095) === 0 && s9NodeCounter > s9NodeLimit) {
+      s9Aborted = true;
+      return 0;
+    }
+
+    const occ = redMask | blueMask;
+    const rem = 15 - POP15[occ];
+    const gPly = 15 - rem;
+    const turn = gPly & 1;
+
+    // Exact endgame override
+    const useExact = (exactLimit > 0 && rem <= exactLimit);
+    const effDepth = useExact ? rem : depth;
+
+    const key = ((redMask << 15) | blueMask) + 1;
+    const idx = ttHash(key);
+    let ttBestMoveCode = -1;
+
+    if (TT_KEY[idx] === key) {
+      const info = TT_INFO[idx];
+      const entryDepth = (info >>> 2) & 31;
+      const entryFlag = info & 3;
+      const storedMove = ((info >>> 7) & 63) - 1;
+      if (storedMove >= 0) ttBestMoveCode = storedMove;
+      if (entryDepth >= effDepth) {
+        const entryVal = TT_VAL[idx];
+        if (entryFlag === 0) return entryVal;
+        if (entryFlag === 1 && entryVal > alpha) alpha = entryVal;
+        else if (entryFlag === 2 && entryVal < beta) beta = entryVal;
+        if (alpha >= beta) return entryVal;
+      }
+    }
+
+    // Generate safe moves
+    const moves = [];
+    if (isClassic) {
+      const myMask = (turn === 0) ? redMask : blueMask;
+      const myColor = (turn === 0) ? 1 : 2;
+      for (let e = 0; e < 15; e++) {
+        if (occ & (1 << e)) continue;
+        if (!isMine(myMask, e)) {
+          moves.push((e << 1) | (myColor - 1));
+        }
+      }
+    } else {
+      if (occ === 0) {
+        // Opening symmetry on empty K6: all edges & colors are isomorphic
+        moves.push(0);
+      } else {
+        for (let e = 0; e < 15; e++) {
+          if (occ & (1 << e)) continue;
+          if (!isMine(redMask, e)) moves.push((e << 1) | 0);
+          if (!isMine(blueMask, e)) moves.push((e << 1) | 1);
+        }
+      }
+    }
+
+    if (moves.length === 0) {
+      // Forced loss on next move (gPly + 1)
+      return -(50000 - (gPly + 1));
+    }
+
+    if (effDepth <= 0) {
+      return evaluateS9(redMask, blueMask, isClassic, turn, occ);
+    }
+
+    // Move ordering: TT best move first, then tactical ordering
+    if (ttBestMoveCode >= 0) {
+      const pos = moves.indexOf(ttBestMoveCode);
+      if (pos > 0) {
+        moves[pos] = moves[0];
+        moves[0] = ttBestMoveCode;
+      }
+    }
+
+    const origAlpha = alpha;
+    let bestVal = -999999;
+    let bestMove = moves[0];
+
+    for (let i = 0; i < moves.length; i++) {
+      const mCode = moves[i];
+      const e = mCode >>> 1;
+      const c = (mCode & 1) + 1;
+      const bit = 1 << e;
+      const nRed = (c === 1) ? (redMask | bit) : redMask;
+      const nBlue = (c === 2) ? (blueMask | bit) : blueMask;
+
+      const score = -negamaxS9(nRed, nBlue, effDepth - 1, -beta, -alpha, isClassic, exactLimit);
+      if (s9Aborted) return bestVal > -999999 ? bestVal : 0;
+
+      if (score > bestVal) {
+        bestVal = score;
+        bestMove = mCode;
+      }
+      if (score > alpha) alpha = score;
+      if (alpha >= beta) break;
+    }
+
+    // Store in TT
+    if (!s9Aborted) {
+      let flag = 0;
+      if (bestVal <= origAlpha) flag = 2; // UPPER
+      else if (bestVal >= beta) flag = 1; // LOWER
+      const prevKey = TT_KEY[idx];
+      if (prevKey === 0) ttCachedCount++;
+      TT_KEY[idx] = key;
+      TT_VAL[idx] = bestVal;
+      const storeDepth = Math.min(31, effDepth);
+      TT_INFO[idx] = flag | (storeDepth << 2) | ((bestMove + 1) << 7);
+    }
+
+    return bestVal;
+  }
+
+  function chooseMoveS9(redMask, blueMask, isClassic, turn, depthSetting, exactThreshold, allowRandomTie = true) {
+    if (ttIsClassic !== isClassic) {
+      clearTT(isClassic);
+    }
+    const occ = redMask | blueMask;
+    const rem = 15 - POP15[occ];
+    const effDepth = (exactThreshold > 0 && rem <= exactThreshold) ? rem : depthSetting;
+
+    const moves = [];
+    if (isClassic) {
+      const myMask = (turn === 0) ? redMask : blueMask;
+      const myColor = (turn === 0) ? 1 : 2;
+      for (let e = 0; e < 15; e++) {
+        if (occ & (1 << e)) continue;
+        if (!isMine(myMask, e)) moves.push({ e, c: myColor });
+      }
+    } else {
+      for (let e = 0; e < 15; e++) {
+        if (occ & (1 << e)) continue;
+        if (!isMine(redMask, e)) moves.push({ e, c: 1 });
+        if (!isMine(blueMask, e)) moves.push({ e, c: 2 });
+      }
+    }
+
+    // No safe move -> forced suicide on first uncolored edge
+    if (moves.length === 0) {
+      for (let e = 0; e < 15; e++) {
+        if (!(occ & (1 << e))) {
+          return {
+            e,
+            c: isClassic ? (turn === 0 ? 1 : 2) : 1,
+            score: -(50000 - (15 - rem + 1)),
+            nodes: 1,
+            ms: 0.01,
+            exactUsed: true,
+            forcedLoss: true
+          };
+        }
+      }
+    }
+
+    // Opening move optimization in Generalized Ramsey or Classic Sim when rem == 15
+    if (occ === 0 && !isClassic && !allowRandomTie) {
+      // Fall through to evaluate or pick cleanly
+    }
+
+    const t0 = performance.now();
+    s9NodeCounter = 0;
+    s9Aborted = false;
+    s9NodeLimit = (effDepth >= 6 || rem <= exactThreshold) ? 1400000 : 400000;
+
+    // Order TT best move first at root
+    const rootKey = ((redMask << 15) | blueMask) + 1;
+    const rootIdx = ttHash(rootKey);
+    if (TT_KEY[rootIdx] === rootKey) {
+      const sm = ((TT_INFO[rootIdx] >>> 7) & 63) - 1;
+      if (sm >= 0) {
+        const se = sm >>> 1;
+        const sc = (sm & 1) + 1;
+        const pos = moves.findIndex(m => m.e === se && m.c === sc);
+        if (pos > 0) {
+          const tmp = moves[0];
+          moves[0] = moves[pos];
+          moves[pos] = tmp;
+        }
+      }
+    }
+
+    let bestScore = -999999;
+    let bestMoves = [];
+    let alpha = -999999;
+    const beta = 999999;
+
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
+      const bit = 1 << m.e;
+      const nRed = (m.c === 1) ? (redMask | bit) : redMask;
+      const nBlue = (m.c === 2) ? (blueMask | bit) : blueMask;
+
+      // On empty board in Generalized Ramsey, all moves are isomorphic; evaluate once unless exact tie list wanted
+      let val;
+      if (occ === 0 && !isClassic && i > 0) {
+        val = bestScore;
+      } else {
+        val = -negamaxS9(nRed, nBlue, effDepth - 1, -beta, -alpha, isClassic, exactThreshold);
+      }
+
+      if (val > bestScore) {
+        bestScore = val;
+        bestMoves = [m];
+        if (val > alpha) alpha = val;
+      } else if (val === bestScore) {
+        bestMoves.push(m);
+      }
+      if (s9Aborted) break;
+    }
+
+    const ms = performance.now() - t0;
+    const chosen = allowRandomTie
+      ? bestMoves[Math.floor(Math.random() * bestMoves.length)]
+      : bestMoves[0];
+
+    return {
+      e: chosen.e,
+      c: chosen.c,
+      score: bestScore,
+      nodes: s9NodeCounter,
+      ms,
+      exactUsed: (exactThreshold > 0 && rem <= exactThreshold),
+      forcedLoss: false
+    };
+  }
+
+  // =========================================================================
+  // 4. STRATEGIES S1 ~ S8 IMPLEMENTATIONS
+  // =========================================================================
+  function getLegalSafeMoves(redMask, blueMask, isClassic, turn) {
+    const occ = redMask | blueMask;
+    const safe = [];
+    if (isClassic) {
+      const myMask = (turn === 0) ? redMask : blueMask;
+      const myColor = (turn === 0) ? 1 : 2;
+      for (let e = 0; e < 15; e++) {
+        if (occ & (1 << e)) continue;
+        if (!isMine(myMask, e)) safe.push({ e, c: myColor });
+      }
+      if (safe.length === 0) {
+        for (let e = 0; e < 15; e++) {
+          if (!(occ & (1 << e))) return [{ e, c: myColor }];
+        }
+      }
+    } else {
+      for (let e = 0; e < 15; e++) {
+        if (occ & (1 << e)) continue;
+        if (!isMine(redMask, e)) safe.push({ e, c: 1 });
+        if (!isMine(blueMask, e)) safe.push({ e, c: 2 });
+      }
+      if (safe.length === 0) {
+        for (let e = 0; e < 15; e++) {
+          if (!(occ & (1 << e))) return [{ e, c: 1 }];
+        }
+      }
+    }
+    return safe;
+  }
+
+  function pickMaxScored(safeMoves, scoreFn) {
+    let bestVal = -Infinity;
+    let bestList = [];
+    for (let i = 0; i < safeMoves.length; i++) {
+      const m = safeMoves[i];
+      const val = scoreFn(m);
+      if (val > bestVal) {
+        bestVal = val;
+        bestList = [m];
+      } else if (val === bestVal) {
+        bestList.push(m);
+      }
+    }
+    return bestList[Math.floor(Math.random() * bestList.length)];
+  }
+
+  function chooseStrategyMove(stratId, redMask, blueMask, isClassic, turn, lastMove, s9Depth, s9Exact) {
+    if (stratId === 8) {
+      return chooseMoveS9(redMask, blueMask, isClassic, turn, s9Depth, s9Exact, true);
+    }
+
+    const safe = getLegalSafeMoves(redMask, blueMask, isClassic, turn);
+    const occ = redMask | blueMask;
+    const ply = POP15[occ];
+
+    // S1: Random Safe
+    if (stratId === 0) {
+      const pick = safe[Math.floor(Math.random() * safe.length)];
+      return { e: pick.e, c: pick.c, meta: null };
+    }
+
+    // S2: Corner-Breaking Defense (Destroy V-angles, freeze M <= 1)
+    if (stratId === 1) {
+      const chosen = pickMaxScored(safe, (m) => {
+        const bit = 1 << m.e;
+        const nRed = (m.c === 1) ? (redMask | bit) : redMask;
+        const nBlue = (m.c === 2) ? (blueMask | bit) : blueMask;
+        const oppBefore = (m.c === 1) ? blueMask : redMask;
+        const myAfter = (m.c === 1) ? nRed : nBlue;
+        // Count how many opponent V-angles this edge breaks (was an opponent mine!)
+        const brokeOppV = isMine(oppBefore, m.e) ? 1 : 0;
+        // Count resulting double mines (want minimal M!) and new V-angles created
+        let newDoubleM = 0;
+        let newMines = 0;
+        const nOcc = occ | bit;
+        for (let e2 = 0; e2 < 15; e2++) {
+          if (nOcc & (1 << e2)) continue;
+          const rM = isMine(nRed, e2);
+          const bM = isMine(nBlue, e2);
+          if (rM && bM) newDoubleM++;
+          if (rM || bM) newMines++;
+        }
+        // Also avoid creating V-angles in own color
+        let newMyV = 0;
+        const tris = EDGE_TRIS[m.e];
+        for (let i = 0; i < 4; i++) {
+          const tm = TRI_MASKS[tris[i]];
+          if (!(oppBefore & tm) && POP15[myAfter & tm] === 2) newMyV++;
+        }
+        return brokeOppV * 40 - newDoubleM * 60 - newMyV * 12 - newMines * 2;
+      });
+      return { e: chosen.e, c: chosen.c, meta: null };
+    }
+
+    // S3: Construct P4 & Double Mines (M >= 2)
+    if (stratId === 2) {
+      const chosen = pickMaxScored(safe, (m) => {
+        const bit = 1 << m.e;
+        const nRed = (m.c === 1) ? (redMask | bit) : redMask;
+        const nBlue = (m.c === 2) ? (blueMask | bit) : blueMask;
+        const nOcc = occ | bit;
+        let doubleM = 0;
+        let singleM = 0;
+        let p4Count = 0;
+        for (let e2 = 0; e2 < 15; e2++) {
+          if (nOcc & (1 << e2)) continue;
+          const rM = isMine(nRed, e2);
+          const bM = isMine(nBlue, e2);
+          if (rM && bM) doubleM++;
+          else if (rM || bM) singleM++;
+        }
+        // P4 creation: degree increase on endpoints where adjacent vertices already have edges of same color
+        const myAfter = (m.c === 1) ? nRed : nBlue;
+        const u = EDGES[m.e][0];
+        const v = EDGES[m.e][1];
+        const degU = countVertexDeg(myAfter, u);
+        const degV = countVertexDeg(myAfter, v);
+        if (degU >= 2 && degV >= 2) p4Count += 2;
+        else if (degU >= 2 || degV >= 2) p4Count += 1;
+        return doubleM * 50 + singleM * 10 + p4Count * 6;
+      });
+      return { e: chosen.e, c: chosen.c, meta: null };
+    }
+
+    // S4: Two-Phase Dynamic Mine Calculation
+    if (stratId === 3) {
+      if (ply < 6) {
+        // Phase 1: Balanced placement, avoid premature self-trapping, slight edge spread
+        const chosen = pickMaxScored(safe, (m) => {
+          const bit = 1 << m.e;
+          const myAfter = (m.c === 1) ? (redMask | bit) : (blueMask | bit);
+          const u = EDGES[m.e][0];
+          const v = EDGES[m.e][1];
+          const degSum = countVertexDeg(myAfter, u) + countVertexDeg(myAfter, v);
+          const oppBefore = (m.c === 1) ? blueMask : redMask;
+          const brokeOpp = isMine(oppBefore, m.e) ? 8 : 0;
+          return brokeOpp - degSum * 3;
+        });
+        return { e: chosen.e, c: chosen.c, meta: null };
+      } else {
+        // Phase 2: Full scan for instant kills (opp safe == 0), M>=2 traps, and parity
+        const chosen = pickMaxScored(safe, (m) => {
+          const bit = 1 << m.e;
+          const nRed = (m.c === 1) ? (redMask | bit) : redMask;
+          const nBlue = (m.c === 2) ? (blueMask | bit) : blueMask;
+          const nextTurn = (turn + 1) & 1;
+          const st = analyzeBoardState(nRed, nBlue, isClassic, nextTurn);
+          if (st.playableForCurrent === 0) return 100000; // Instant kill!
+          // Check if opponent has a move that kills us immediately
+          const oppMoves = getLegalSafeMoves(nRed, nBlue, isClassic, nextTurn);
+          let oppCanKill = false;
+          for (let i = 0; i < oppMoves.length; i++) {
+            const om = oppMoves[i];
+            const obit = 1 << om.e;
+            const nnRed = (om.c === 1) ? (nRed | obit) : nRed;
+            const nnBlue = (om.c === 2) ? (nBlue | obit) : nBlue;
+            const st2 = analyzeBoardState(nnRed, nnBlue, isClassic, turn);
+            if (st2.playableForCurrent === 0) {
+              oppCanKill = true;
+              break;
+            }
+          }
+          if (oppCanKill) return -50000;
+          const parityBonus = isClassic
+            ? (turn === 0 ? (st.p1Safe - st.p2Safe) * 15 : (st.p2Safe - st.p1Safe) * 15)
+            : ((st.playableGeneralized & 1) ? -12 : 12); // After our move, EVEN playable left for opp -> good for us!
+          return st.doubleMines * 35 + parityBonus - st.playableForCurrent * 5;
+        });
+        return { e: chosen.e, c: chosen.c, meta: null };
+      }
+    }
+
+    // S5: Degree Minimization (Delta <= 2)
+    if (stratId === 4) {
+      const chosen = pickMaxScored(safe, (m) => {
+        const bit = 1 << m.e;
+        const myAfter = (m.c === 1) ? (redMask | bit) : (blueMask | bit);
+        let maxDeg = 0;
+        let sqSum = 0;
+        for (let v = 0; v < 6; v++) {
+          const d = countVertexDeg(myAfter, v);
+          if (d > maxDeg) maxDeg = d;
+          sqSum += d * d;
+        }
+        const underTwoBonus = (maxDeg <= 2) ? 100 : 0;
+        return underTwoBonus - maxDeg * 25 - sqSum * 4;
+      });
+      return { e: chosen.e, c: chosen.c, meta: null };
+    }
+
+    // S6: Bipartite K3,3 Coloring
+    if (stratId === 5) {
+      const chosen = pickMaxScored(safe, (m) => {
+        const bit = 1 << m.e;
+        // Red uses Cut A ({0,1,2} vs {3,4,5}); Blue uses Cut B ({0,2,4} vs {1,3,5})
+        const targetMask = (m.c === 1) ? BIPARTITE_MASK_A : BIPARTITE_MASK_B;
+        const inBipartite = (bit & targetMask) ? 100 : 0;
+        const myAfter = (m.c === 1) ? (redMask | bit) : (blueMask | bit);
+        const oppBefore = (m.c === 1) ? blueMask : redMask;
+        let newMyV = 0;
+        const tris = EDGE_TRIS[m.e];
+        for (let i = 0; i < 4; i++) {
+          const tm = TRI_MASKS[tris[i]];
+          if (!(oppBefore & tm) && POP15[myAfter & tm] === 2) newMyV++;
+        }
+        return inBipartite - newMyV * 15;
+      });
+      return { e: chosen.e, c: chosen.c, meta: null };
+    }
+
+    // S7: Potential Function Defense (Beck / Erdos-Selfridge)
+    if (stratId === 6) {
+      const chosen = pickMaxScored(safe, (m) => {
+        const bit = 1 << m.e;
+        const nRed = (m.c === 1) ? (redMask | bit) : redMask;
+        const nBlue = (m.c === 2) ? (blueMask | bit) : blueMask;
+        let potential = 0;
+        for (let t = 0; t < 20; t++) {
+          const tm = TRI_MASKS[t];
+          const rCnt = POP15[nRed & tm];
+          const bCnt = POP15[nBlue & tm];
+          if (rCnt > 0 && bCnt === 0) {
+            // Unblocked Red triangle: danger 2^(rCnt - 3) * 100 -> 1->25, 2->100
+            potential += (rCnt === 2) ? 100 : 25;
+          } else if (bCnt > 0 && rCnt === 0) {
+            potential += (bCnt === 2) ? 100 : 25;
+          }
+        }
+        // In Classic Sim, also penalize own color potential more heavily than opponent's
+        if (isClassic) {
+          let myPot = 0;
+          const myAfter = (m.c === 1) ? nRed : nBlue;
+          const oppBefore = (m.c === 1) ? blueMask : redMask;
+          for (let t = 0; t < 20; t++) {
+            const tm = TRI_MASKS[t];
+            if (!(oppBefore & tm)) {
+              const cnt = POP15[myAfter & tm];
+              if (cnt === 2) myPot += 120;
+              else if (cnt === 1) myPot += 20;
+            }
+          }
+          return -myPot * 2 - potential;
+        }
+        return -potential;
+      });
+      return { e: chosen.e, c: chosen.c, meta: null };
+    }
+
+    // S8: Antipodal Symmetry Mirror (u+3, v+3)
+    if (stratId === 7) {
+      if (lastMove) {
+        const mirE = MIRROR_EDGE[lastMove.e];
+        if (mirE !== lastMove.e) {
+          const prefColor = isClassic ? (turn === 0 ? 1 : 2) : lastMove.c;
+          const cand = safe.find(m => m.e === mirE && m.c === prefColor) || safe.find(m => m.e === mirE);
+          if (cand) return { e: cand.e, c: cand.c, meta: null };
+        }
+      }
+      // Otherwise prefer diameters or edges that preserve mirror partners
+      const chosen = pickMaxScored(safe, (m) => {
+        let score = 0;
+        if (IS_DIAMETER[m.e]) score += 30;
+        const mirE = MIRROR_EDGE[m.e];
+        if (mirE !== m.e && !(occ & (1 << mirE))) score += 15;
+        return score;
+      });
+      return { e: chosen.e, c: chosen.c, meta: null };
+    }
+
+    return { e: safe[0].e, c: safe[0].c, meta: null };
+  }
+
+  // =========================================================================
+  // 5. FULL GAME SIMULATOR & ANNOTATION ENGINE
+  // =========================================================================
+  function generateMoveNote(prevStats, nextStats, e, c, isClassic, lossTriIdx, stratId) {
+    if (lossTriIdx >= 0) {
+      const verts = TRIS[lossTriIdx].verts.map(v => VERTEX_NAMES[v]).join(``);
+      const colName = c === 1 ? `紅` : `藍`;
+      return `構成${colName}色 △${verts}・立即敗北`;
+    }
+    const notes = [];
+    if (nextStats.playableForCurrent === 0) {
+      notes.push(`對手生路歸零・絕殺`);
+    } else if (nextStats.doubleMines >= 2 && prevStats.doubleMines < 2) {
+      notes.push(`構造雙地雷 M=${nextStats.doubleMines}`);
+    } else if (nextStats.doubleMines > prevStats.doubleMines) {
+      notes.push(`新增雙地雷 (M→${nextStats.doubleMines})`);
+    } else if (prevStats.doubleMines > nextStats.doubleMines) {
+      notes.push(`拆解降壓 (M→${nextStats.doubleMines})`);
+    }
+    if (!isClassic) {
+      const wasRedMine = prevStats.edgeTags[e] === `red-mine`;
+      const wasBlueMine = prevStats.edgeTags[e] === `blue-mine`;
+      if ((wasRedMine && c === 2) || (wasBlueMine && c === 1)) {
+        notes.push(`借色解圍`);
+      }
+    }
+    if (stratId === 7 && notes.length === 0) {
+      notes.push(IS_DIAMETER[e] ? `佔據對稱直徑` : `鏡射反演落子`);
+    }
+    if (notes.length === 0) {
+      if (nextStats.rem >= 11) notes.push(`開局拓撲佈線`);
+      else if (nextStats.rem <= 4) notes.push(`殘局關鍵卡位`);
+      else notes.push(`安全延伸`);
+    }
+    return notes.join(`；`);
+  }
+
+  function simulateFullGame(p1Strat, p2Strat, isClassic, s9Depth, s9Exact, recordSteps = false) {
+    let redMask = 0;
+    let blueMask = 0;
+    let lastMove = null;
+    let maxM = 0;
+    let winner = 0; // 1 or 2
+    let lossTriIdx = -1;
+    let plyCount = 0;
+    const steps = recordSteps ? [{
+      ply: 0,
+      turn: 0,
+      player: `-`,
+      edge: -1,
+      edgeLabel: `開局`,
+      color: 0,
+      redMask: 0,
+      blueMask: 0,
+      stats: analyzeBoardState(0, 0, isClassic, 0),
+      note: `空白 K6 棋盤（15 條邊皆為安全生路）`,
+      s9Meta: null
+    }] : null;
+
+    let prevStats = recordSteps ? steps[0].stats : null;
+
+    for (let ply = 0; ply < 15; ply++) {
+      const turn = ply & 1; // 0 = P1, 1 = P2
+      const stratId = (turn === 0) ? p1Strat : p2Strat;
+      const moveRes = chooseStrategyMove(stratId, redMask, blueMask, isClassic, turn, lastMove, s9Depth, s9Exact);
+      const e = moveRes.e;
+      const c = moveRes.c;
+      const bit = 1 << e;
+
+      const targetMaskBefore = (c === 1) ? redMask : blueMask;
+      lossTriIdx = findCompletedTriangle(targetMaskBefore, e);
+
+      if (c === 1) redMask |= bit;
+      else blueMask |= bit;
+
+      plyCount = ply + 1;
+      const nextTurn = plyCount & 1;
+      const nextStats = analyzeBoardState(redMask, blueMask, isClassic, nextTurn);
+      if (nextStats.doubleMines > maxM) maxM = nextStats.doubleMines;
+
+      if (recordSteps) {
+        const note = generateMoveNote(prevStats, nextStats, e, c, isClassic, lossTriIdx, stratId);
+        steps.push({
+          ply: plyCount,
+          turn,
+          player: turn === 0 ? `P1` : `P2`,
+          edge: e,
+          edgeLabel: `${VERTEX_NAMES[EDGES[e][0]]}-${VERTEX_NAMES[EDGES[e][1]]}`,
+          color: c,
+          redMask,
+          blueMask,
+          stats: nextStats,
+          note,
+          s9Meta: (stratId === 8) ? moveRes : null
+        });
+        prevStats = nextStats;
+      }
+
+      if (lossTriIdx >= 0) {
+        // Player at `turn` completed a monochromatic triangle -> loses!
+        winner = (turn === 0) ? 2 : 1;
+        break;
+      }
+      lastMove = { e, c };
+    }
+
+    return {
+      winner,
+      plyCount,
+      maxM,
+      lossTriIdx,
+      steps
+    };
+  }
+
+  // =========================================================================
+  // 6. APPLICATION STATE & PERSISTENCE
+  // =========================================================================
+  const APP_STATE = {
+    ruleMode: `generalized`, // 'generalized' | 'classic'
+    s9Preset: `d4`,          // 'd2' | 'd4' | 'd6' | 'exact'
+    s9Depth: 4,
+    s9Exact: 0,
+    p1Strat: 8,              // S9
+    p2Strat: 6,              // S7
+    layoutMode: `hex`,       // 'hex' | 'force'
+    duelSteps: [],
+    duelWinner: 0,
+    duelLossTri: -1,
+    viewPly: 0,
+    playing: false,
+    playTimer: null,
+    humanMode: false,
+    humanSide: 0,            // 0 = P1, 1 = P2 (the side human took over)
+    pendingEdge: -1,
+    s9LastPerf: null,
+    s9InspectResult: null,
+    matrixData: null
+  };
+
+  // Vertex positions (SVG 440x380 viewBox)
+  let VERTEX_POS = [];
+  function computeHexPositions() {
+    const cx = 220;
+    const cy = 190;
+    const r = 136;
+    const pos = [];
+    for (let i = 0; i < 6; i++) {
+      const ang = -Math.PI / 2 + (i * Math.PI * 2) / 6;
+      pos.push({ x: cx + r * Math.cos(ang), y: cy + r * Math.sin(ang) });
+    }
+    return pos;
+  }
+
+  function computeForcePositions(redMask, blueMask) {
+    // Deterministic spring-embedder sensitive to colored edges (groups same-color clusters gently)
+    const pos = computeHexPositions();
+    const vx = new Float64Array(6);
+    const vy = new Float64Array(6);
+    for (let iter = 0; iter < 90; iter++) {
+      for (let i = 0; i < 6; i++) {
+        // Pull gently toward center
+        vx[i] = (220 - pos[i].x) * 0.025;
+        vy[i] = (190 - pos[i].y) * 0.025;
+        for (let j = 0; j < 6; j++) {
+          if (i === j) continue;
+          const dx = pos[i].x - pos[j].x;
+          const dy = pos[i].y - pos[j].y;
+          const dist = Math.hypot(dx, dy) || 1;
+          // Repulsion
+          const rep = 4200 / (dist * dist);
+          vx[i] += (dx / dist) * rep;
+          vy[i] += (dy / dist) * rep;
+          // Attraction along played edges
+          const e = EDGE_IDX[i][j];
+          const bit = 1 << e;
+          if ((redMask & bit) || (blueMask & bit)) {
+            const targetLen = 155;
+            const att = (dist - targetLen) * 0.035;
+            vx[i] -= (dx / dist) * att;
+            vy[i] -= (dy / dist) * att;
+          }
+        }
+      }
+      for (let i = 0; i < 6; i++) {
+        pos[i].x = Math.max(46, Math.min(394, pos[i].x + vx[i] * 0.55));
+        pos[i].y = Math.max(42, Math.min(338, pos[i].y + vy[i] * 0.55));
+      }
+    }
+    return pos;
+  }
+
+  VERTEX_POS = computeHexPositions();
+
+  // =========================================================================
+  // 7. DOM INITIALIZATION & RENDERING
+  // =========================================================================
+  function populateStrategySelects() {
+    const ids = [`sel-p1`, `sel-p2`, `mc-p1`, `mc-p2`];
+    ids.forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      sel.innerHTML = STRATEGIES.map(s =>
+        `<option value="${s.id}">${s.code}【${s.name}】</option>`
+      ).join(``);
+    });
+    const sp1 = document.getElementById(`sel-p1`);
+    const sp2 = document.getElementById(`sel-p2`);
+    const mp1 = document.getElementById(`mc-p1`);
+    const mp2 = document.getElementById(`mc-p2`);
+    if (sp1) sp1.value = String(APP_STATE.p1Strat);
+    if (sp2) sp2.value = String(APP_STATE.p2Strat);
+    if (mp1) mp1.value = String(APP_STATE.p1Strat);
+    if (mp2) mp2.value = String(APP_STATE.p2Strat);
+  }
+
+  function renderStrategyCompendium() {
+    const grid = document.getElementById(`strategy-cards-grid`);
+    if (!grid) return;
+    grid.innerHTML = STRATEGIES.map(s => `
+      <article class="strategy-card ${s.id === 8 ? `is-s9` : ``}">
+        <div class="strategy-card-head">
+          <h3 class="strategy-card-title">${s.code}【${s.name}】</h3>
+          <span class="mono-badge ${s.id === 8 ? `is-gold` : ``}">${s.badge}</span>
+        </div>
+        <p style="margin:0;font-size:0.875rem;color:var(--on-surface-variant);">${s.desc}</p>
+      </article>
+    `).join(``);
+  }
+
+  function updateRuleUI() {
+    const isClassic = APP_STATE.ruleMode === `classic`;
+    const btnGen = document.getElementById(`btn-rule-gen`);
+    const btnCls = document.getElementById(`btn-rule-classic`);
+    const callout = document.getElementById(`rule-callout-text`);
+    if (btnGen) btnGen.classList.toggle(`is-active`, !isClassic);
+    if (btnCls) btnCls.classList.toggle(`is-active`, isClassic);
+    if (callout) {
+      callout.innerHTML = isClassic
+        ? `目前規則：<strong>傳統一人一色 (Classic Sim)</strong>。P1 嚴格只能塗紅邊、P2 嚴格只能塗藍邊；重現圖論經典文獻 (K₆, K₃, −) 中後手 (P2) 佔優之理論定理。`
+        : `目前規則：<strong>自由選色 (Generalized Ramsey)</strong>。每位玩家每手皆可自由選擇塗紅或塗藍；當某條未著色邊同時成為紅方與藍方地雷時，即構成「雙向地雷 (M)」，誰畫誰死。`;
+    }
+  }
+
+  function updateS9DepthUI() {
+    const presets = [`d2`, `d4`, `d6`, `exact`];
+    presets.forEach(p => {
+      const btn = document.getElementById(`btn-depth-${p}`);
+      if (btn) btn.classList.toggle(`is-active`, APP_STATE.s9Preset === p);
+    });
+    const modeBadge = document.getElementById(`badge-s9-mode`);
+    const ttBadge = document.getElementById(`badge-s9-tt`);
+    const perfBadge = document.getElementById(`badge-s9-perf`);
+
+    const labelMap = {
+      d2: `深度 2（極速預覽）`,
+      d4: `深度 4（均衡戰術）`,
+      d6: `深度 6（深層推演）`,
+      exact: `深度 6 + 殘局 ≤ 8 步完美窮舉`
+    };
+    if (modeBadge) modeBadge.textContent = `目前設定：${labelMap[APP_STATE.s9Preset]}`;
+    if (ttBadge) ttBadge.textContent = `TT 轉置表：${ttCachedCount.toLocaleString()} 筆快取`;
+    if (perfBadge) {
+      if (APP_STATE.s9LastPerf) {
+        const p = APP_STATE.s9LastPerf;
+        perfBadge.textContent = `最近推演：${p.nodes.toLocaleString()} 節點 · ${p.ms.toFixed(2)} ms${p.exactUsed ? `（完美窮舉）` : ``}`;
+      } else {
+        perfBadge.textContent = `最近推演：待機就緒`;
+      }
+    }
+  }
+
+  // Interactive SVG Board Rendering & Dragging
+  let dragVertexIdx = -1;
+  let dragMoved = false;
+  let pickedVertex = -1;
+
+  function renderBoardSVG() {
+    const svg = document.getElementById(`k6-svg`);
+    if (!svg) return;
+    const step = APP_STATE.duelSteps[APP_STATE.viewPly];
+    if (!step) return;
+
+    const isClassic = APP_STATE.ruleMode === `classic`;
+    const stats = step.stats;
+    const redMask = step.redMask;
+    const blueMask = step.blueMask;
+    const lastEdge = step.edge;
+    const isFinalPly = (APP_STATE.viewPly === APP_STATE.duelSteps.length - 1) && APP_STATE.duelLossTri >= 0;
+
+    let html = ``;
+
+    // 1. Highlight losing triangle if viewing final losing step
+    if (isFinalPly && APP_STATE.duelLossTri >= 0) {
+      const tri = TRIS[APP_STATE.duelLossTri];
+      const pts = tri.verts.map(v => `${VERTEX_POS[v].x.toFixed(1)},${VERTEX_POS[v].y.toFixed(1)}`).join(` `);
+      html += `<polygon class="k6-tri-loss" points="${pts}" />`;
+    }
+
+    // 2. Edges (hit layer + visual line + double mine badge)
+    for (let e = 0; e < 15; e++) {
+      const u = EDGES[e][0];
+      const v = EDGES[e][1];
+      const p1 = VERTEX_POS[u];
+      const p2 = VERTEX_POS[v];
+      const tag = stats.edgeTags[e];
+      let cls = `k6-edge-line `;
+      if (tag === `played-red`) cls += `k6-edge-played-red`;
+      else if (tag === `played-blue`) cls += `k6-edge-played-blue`;
+      else if (tag === `double-mine`) cls += `k6-edge-double-mine`;
+      else if (tag === `red-mine`) cls += `k6-edge-single-r`;
+      else if (tag === `blue-mine`) cls += `k6-edge-single-b`;
+      else cls += `k6-edge-uncolored-safe`;
+
+      if (e === lastEdge) cls += ` k6-edge-last`;
+      if (e === APP_STATE.pendingEdge) cls += ` k6-edge-selected`;
+
+      html += `<line class="${cls}" x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" />`;
+      html += `<line class="k6-edge-hit" data-edge="${e}" x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" onclick="onEdgeClick(${e})" />`;
+
+      // Double mine marker badge at midpoint (slightly offset for diameter overlap)
+      if (tag === `double-mine`) {
+        const t = IS_DIAMETER[e] ? 0.34 : 0.5;
+        const mx = p1.x + (p2.x - p1.x) * t;
+        const my = p1.y + (p2.y - p1.y) * t;
+        html += `<rect class="k6-mine-badge-bg" x="${(mx - 8).toFixed(1)}" y="${(my - 8).toFixed(1)}" width="16" height="16" rx="3" />`;
+        html += `<text class="k6-mine-badge-text" x="${mx.toFixed(1)}" y="${my.toFixed(1)}">M</text>`;
+      }
+    }
+
+    // 3. Vertices
+    for (let v = 0; v < 6; v++) {
+      const p = VERTEX_POS[v];
+      const pickedCls = (v === pickedVertex) ? ` is-picked` : ``;
+      html += `<circle class="k6-vertex-circle${pickedCls}" data-vert="${v}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="18" onpointerdown="onVertexPointerDown(event, ${v})" onclick="onVertexClick(${v})" />`;
+      html += `<text class="k6-vertex-label" x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}">${VERTEX_NAMES[v]}</text>`;
+    }
+
+    svg.innerHTML = html;
+
+    // Update ply badge
+    const plyBadge = document.getElementById(`board-ply-badge`);
+    if (plyBadge) {
+      const maxPly = APP_STATE.duelSteps.length - 1;
+      plyBadge.textContent = `手數 ${APP_STATE.viewPly} / ${maxPly}`;
+    }
+  }
+
+  function renderTelemetryAndTranscript() {
+    const step = APP_STATE.duelSteps[APP_STATE.viewPly];
+    if (!step) return;
+    const isClassic = APP_STATE.ruleMode === `classic`;
+    const st = step.stats;
+
+    const kpiM = document.getElementById(`kpi-m-val`);
+    const kpiMSub = document.getElementById(`kpi-m-sub`);
+    const kpiSafe = document.getElementById(`kpi-safe-val`);
+    const kpiSafeSub = document.getElementById(`kpi-safe-sub`);
+    const kpiTurn = document.getElementById(`kpi-turn-val`);
+    const kpiTurnSub = document.getElementById(`kpi-turn-sub`);
+    const kpiEval = document.getElementById(`kpi-eval-val`);
+    const kpiEvalSub = document.getElementById(`kpi-eval-sub`);
+
+    if (kpiM) kpiM.textContent = String(st.doubleMines);
+    if (kpiMSub) kpiMSub.textContent = `紅雷 ${st.totalRedMines} · 藍雷 ${st.totalBlueMines}`;
+    if (kpiSafe) kpiSafe.textContent = String(st.playableForCurrent);
+    if (kpiSafeSub) {
+      kpiSafeSub.textContent = isClassic
+        ? `P1生路 ${st.p1Safe} · P2生路 ${st.p2Safe}`
+        : `雙安 ${st.dualSafe} · 單安 ${st.redOnlyMines + st.blueOnlyMines}`;
+    }
+
+    const isGameEndHere = (APP_STATE.viewPly === APP_STATE.duelSteps.length - 1) && APP_STATE.duelWinner > 0;
+    const nextTurn = APP_STATE.viewPly & 1;
+    if (kpiTurn) {
+      if (isGameEndHere) {
+        kpiTurn.textContent = APP_STATE.duelWinner === 1 ? `P1 獲勝` : `P2 獲勝`;
+        kpiTurn.style.color = APP_STATE.duelWinner === 1 ? `var(--data-4)` : `var(--data-1)`;
+      } else {
+        kpiTurn.textContent = nextTurn === 0 ? `輪到 P1` : `輪到 P2`;
+        kpiTurn.style.color = `var(--on-surface)`;
+      }
+    }
+    if (kpiTurnSub) {
+      if (isGameEndHere) {
+        const loser = APP_STATE.duelWinner === 1 ? `P2` : `P1`;
+        kpiTurnSub.textContent = `${loser} 畫出單色三角形`;
+      } else if (APP_STATE.humanMode && nextTurn === APP_STATE.humanSide) {
+        kpiTurnSub.textContent = `人腦接管執手（${isClassic ? (nextTurn === 0 ? `限紅` : `限藍`) : `紅/藍任選`}）`;
+      } else {
+        const sIdx = nextTurn === 0 ? APP_STATE.p1Strat : APP_STATE.p2Strat;
+        kpiTurnSub.textContent = `${STRATEGIES[sIdx].short}${isClassic ? (nextTurn === 0 ? `（紅）` : `（藍）`) : ``}`;
+      }
+    }
+
+    if (kpiEval && kpiEvalSub) {
+      if (APP_STATE.s9InspectResult && APP_STATE.s9InspectResult.ply === APP_STATE.viewPly) {
+        const ir = APP_STATE.s9InspectResult;
+        const eName = `${VERTEX_NAMES[EDGES[ir.e][0]]}-${VERTEX_NAMES[EDGES[ir.e][1]]}`;
+        const cName = ir.c === 1 ? `紅` : `藍`;
+        kpiEval.textContent = ir.score > 40000 ? `必勝 (+)` : (ir.score < -40000 ? `必敗 (-)` : `${ir.score >= 0 ? `+` : ``}${ir.score}`);
+        kpiEvalSub.textContent = `推薦 ${eName}(${cName}) · ${ir.ms.toFixed(1)} ms`;
+      } else if (step.s9Meta) {
+        const sm = step.s9Meta;
+        kpiEval.textContent = sm.score > 40000 ? `必勝 (+)` : (sm.score < -40000 ? `必敗 (-)` : `${sm.score >= 0 ? `+` : ``}${sm.score}`);
+        kpiEvalSub.textContent = `S9 D=${APP_STATE.s9Depth} · ${sm.nodes.toLocaleString()} 節點`;
+      } else {
+        kpiEval.textContent = `--`;
+        kpiEvalSub.textContent = `點擊「S9 即時剖析」`;
+      }
+    }
+
+    // Verdict banner
+    const vb = document.getElementById(`verdict-banner`);
+    const vt = document.getElementById(`verdict-text`);
+    if (vb && vt) {
+      vb.classList.remove(`is-p1`, `is-p2`);
+      if (APP_STATE.duelWinner === 1) vb.classList.add(`is-p1`);
+      else if (APP_STATE.duelWinner === 2) vb.classList.add(`is-p2`);
+
+      if (APP_STATE.humanMode && !isGameEndHere) {
+        vt.innerHTML = `<strong>人腦接管進行中：</strong>第 ${APP_STATE.viewPly} 手盤面。請直接點擊棋盤邊線或兩頂點落子。`;
+      } else if (APP_STATE.duelWinner > 0) {
+        const p1Name = APP_STATE.humanMode && APP_STATE.humanSide === 0 ? `人腦 (Human)` : STRATEGIES[APP_STATE.p1Strat].short;
+        const p2Name = APP_STATE.humanMode && APP_STATE.humanSide === 1 ? `人腦 (Human)` : STRATEGIES[APP_STATE.p2Strat].short;
+        const maxPly = APP_STATE.duelSteps.length - 1;
+        const triVerts = APP_STATE.duelLossTri >= 0 ? TRIS[APP_STATE.duelLossTri].verts.map(v => VERTEX_NAMES[v]).join(``) : ``;
+        vt.innerHTML = `<strong>終局判決：</strong>第 ${maxPly} 手由 <strong>${APP_STATE.duelWinner === 1 ? `P1 (${p1Name})` : `P2 (${p2Name})`} 獲勝</strong>（敗方構成單色 △${triVerts}）。`;
+      } else {
+        vt.textContent = `盤面推演中…`;
+      }
+    }
+
+    // Edge X-Ray chips
+    const xrayHint = document.getElementById(`xray-hint-badge`);
+    const xrayChips = document.getElementById(`xray-chips`);
+    if (xrayHint) xrayHint.textContent = `剩餘 ${st.rem} 條未著色邊`;
+    if (xrayChips) {
+      const chips = [];
+      for (let e = 0; e < 15; e++) {
+        const tag = st.edgeTags[e];
+        if (tag === `played-red` || tag === `played-blue`) continue;
+        const lbl = `${VERTEX_NAMES[EDGES[e][0]]}-${VERTEX_NAMES[EDGES[e][1]]}`;
+        if (tag === `double-mine`) {
+          chips.push(`<span class="mono-badge is-gold">${lbl}｜雙雷 M</span>`);
+        } else if (tag === `red-mine`) {
+          chips.push(`<span class="mono-badge is-danger">${lbl}｜紅雷(塗藍安)</span>`);
+        } else if (tag === `blue-mine`) {
+          chips.push(`<span class="mono-badge" style="border:1px solid var(--data-1);color:var(--data-1);">${lbl}｜藍雷(塗紅安)</span>`);
+        } else {
+          chips.push(`<span class="mono-badge is-good">${lbl}｜安全</span>`);
+        }
+      }
+      xrayChips.innerHTML = chips.length ? chips.join(``) : `<span class="mono-badge">棋盤 15 條邊皆已著色完畢</span>`;
+    }
+
+    // Timeline slider
+    const slider = document.getElementById(`timeline-slider`);
+    if (slider) {
+      slider.max = String(Math.max(0, APP_STATE.duelSteps.length - 1));
+      slider.value = String(APP_STATE.viewPly);
+    }
+
+    // Transcript table
+    const tbody = document.getElementById(`transcript-tbody`);
+    if (tbody) {
+      tbody.innerHTML = APP_STATE.duelSteps.map(s => {
+        const colTag = s.color === 1
+          ? `<span class="mono-badge is-danger">紅 Red</span>`
+          : (s.color === 2 ? `<span class="mono-badge" style="background:var(--surface-container-high);color:var(--data-1);">藍 Blue</span>` : `-`);
+        const curCls = (s.ply === APP_STATE.viewPly) ? ` is-current` : ``;
+        return `
+          <tr class="${curCls}" onclick="jumpToPly(${s.ply})">
+            <td>${s.ply}</td>
+            <td>${s.player}</td>
+            <td><strong>${s.edgeLabel}</strong></td>
+            <td>${colTag}</td>
+            <td>${s.stats.doubleMines}</td>
+            <td>${s.stats.playableForCurrent}</td>
+            <td>${s.note}</td>
+          </tr>
+        `;
+      }).join(``);
+    }
+  }
+
+  function refreshDuelUI() {
+    if (APP_STATE.layoutMode === `force`) {
+      const step = APP_STATE.duelSteps[APP_STATE.viewPly];
+      if (step) VERTEX_POS = computeForcePositions(step.redMask, step.blueMask);
+    }
+    const btnHex = document.getElementById(`btn-layout-hex`);
+    const btnForce = document.getElementById(`btn-layout-force`);
+    if (btnHex) btnHex.classList.toggle(`btn-primary`, APP_STATE.layoutMode === `hex`);
+    if (btnForce) btnForce.classList.toggle(`btn-primary`, APP_STATE.layoutMode === `force`);
+
+    renderBoardSVG();
+    renderTelemetryAndTranscript();
+    updateS9DepthUI();
+  }
+
+  // =========================================================================
+  // 8. DUEL CONTROLS, TIMELINE & HUMAN TAKEOVER
+  // =========================================================================
+  function stopPlayback() {
+    APP_STATE.playing = false;
+    if (APP_STATE.playTimer) {
+      clearInterval(APP_STATE.playTimer);
+      APP_STATE.playTimer = null;
+    }
+    const btn = document.getElementById(`btn-play-toggle`);
+    if (btn) btn.textContent = `播放`;
+  }
+
+  function setRuleMode(mode) {
+    if (APP_STATE.ruleMode === mode) return;
+    stopPlayback();
+    exitHumanTakeover(true);
+    mcCancelFlag = true;
+    matrixCancelFlag = true;
+    APP_STATE.ruleMode = mode;
+    clearTT(mode === `classic`);
+    APP_STATE.s9InspectResult = null;
+    APP_STATE.matrixData = null;
+    updateRuleUI();
+    runNewDuel();
+    saveAppState();
+
+    // Sync Monte Carlo preview & 9x9 Matrix heatmap to the newly selected rule mode
+    setTimeout(() => {
+      const mp1 = document.getElementById(`mc-p1`);
+      const mp2 = document.getElementById(`mc-p2`);
+      if (mp1 && mp2 && !mcRunning) {
+        runMonteCarloAsync(parseInt(mp1.value, 10), parseInt(mp2.value, 10), 1000);
+      }
+      if (!matrixRunning) {
+        runMatrixScan(`fast`);
+      }
+    }, 50);
+  }
+
+  function setS9Preset(preset) {
+    APP_STATE.s9Preset = preset;
+    if (preset === `d2`) { APP_STATE.s9Depth = 2; APP_STATE.s9Exact = 0; }
+    else if (preset === `d4`) { APP_STATE.s9Depth = 4; APP_STATE.s9Exact = 0; }
+    else if (preset === `d6`) { APP_STATE.s9Depth = 6; APP_STATE.s9Exact = 0; }
+    else { APP_STATE.s9Depth = 6; APP_STATE.s9Exact = 8; }
+    APP_STATE.s9InspectResult = null;
+    updateS9DepthUI();
+    if (!APP_STATE.humanMode && (APP_STATE.p1Strat === 8 || APP_STATE.p2Strat === 8)) {
+      runNewDuel();
+    }
+    saveAppState();
+  }
+
+  function setBoardLayout(mode) {
+    APP_STATE.layoutMode = mode;
+    if (mode === `hex`) VERTEX_POS = computeHexPositions();
+    refreshDuelUI();
+    saveAppState();
+  }
+
+  function onStrategySelectChange() {
+    const sp1 = document.getElementById(`sel-p1`);
+    const sp2 = document.getElementById(`sel-p2`);
+    if (sp1) APP_STATE.p1Strat = parseInt(sp1.value, 10);
+    if (sp2) APP_STATE.p2Strat = parseInt(sp2.value, 10);
+    runNewDuel();
+    saveAppState();
+  }
+
+  function swapPlayers() {
+    const tmp = APP_STATE.p1Strat;
+    APP_STATE.p1Strat = APP_STATE.p2Strat;
+    APP_STATE.p2Strat = tmp;
+    const sp1 = document.getElementById(`sel-p1`);
+    const sp2 = document.getElementById(`sel-p2`);
+    if (sp1) sp1.value = String(APP_STATE.p1Strat);
+    if (sp2) sp2.value = String(APP_STATE.p2Strat);
+    runNewDuel();
+    saveAppState();
+  }
+
+  function runNewDuel() {
+    stopPlayback();
+    exitHumanTakeover(true);
+    APP_STATE.s9InspectResult = null;
+    const isClassic = APP_STATE.ruleMode === `classic`;
+    const res = simulateFullGame(APP_STATE.p1Strat, APP_STATE.p2Strat, isClassic, APP_STATE.s9Depth, APP_STATE.s9Exact, true);
+    APP_STATE.duelSteps = res.steps;
+    APP_STATE.duelWinner = res.winner;
+    APP_STATE.duelLossTri = res.lossTriIdx;
+    APP_STATE.viewPly = res.steps.length - 1;
+
+    // Record S9 performance telemetry if S9 played
+    const lastS9Step = [...res.steps].reverse().find(s => s.s9Meta !== null);
+    if (lastS9Step && lastS9Step.s9Meta) {
+      APP_STATE.s9LastPerf = lastS9Step.s9Meta;
+    }
+
+    refreshDuelUI();
+  }
+
+  function jumpToPly(ply) {
+    stopPlayback();
+    if (APP_STATE.humanMode) exitHumanTakeover(true);
+    APP_STATE.viewPly = Math.max(0, Math.min(APP_STATE.duelSteps.length - 1, ply));
+    refreshDuelUI();
+  }
+
+  function stepTimeline(dir) {
+    stopPlayback();
+    if (APP_STATE.humanMode) exitHumanTakeover(true);
+    const maxPly = APP_STATE.duelSteps.length - 1;
+    if (dir === `start`) APP_STATE.viewPly = 0;
+    else if (dir === `prev`) APP_STATE.viewPly = Math.max(0, APP_STATE.viewPly - 1);
+    else if (dir === `next`) APP_STATE.viewPly = Math.min(maxPly, APP_STATE.viewPly + 1);
+    else if (dir === `end`) APP_STATE.viewPly = maxPly;
+    refreshDuelUI();
+  }
+
+  function onTimelineSlider(val) {
+    stopPlayback();
+    if (APP_STATE.humanMode) exitHumanTakeover(true);
+    APP_STATE.viewPly = parseInt(val, 10) || 0;
+    refreshDuelUI();
+  }
+
+  function togglePlayback() {
+    if (APP_STATE.humanMode) exitHumanTakeover(true);
+    if (APP_STATE.playing) {
+      stopPlayback();
+      return;
+    }
+    const maxPly = APP_STATE.duelSteps.length - 1;
+    if (APP_STATE.viewPly >= maxPly) APP_STATE.viewPly = 0;
+    APP_STATE.playing = true;
+    const btn = document.getElementById(`btn-play-toggle`);
+    if (btn) btn.textContent = `暫停`;
+    APP_STATE.playTimer = setInterval(() => {
+      if (APP_STATE.viewPly >= APP_STATE.duelSteps.length - 1) {
+        stopPlayback();
+        return;
+      }
+      APP_STATE.viewPly++;
+      refreshDuelUI();
+    }, 620);
+  }
+
+  function inspectCurrentWithS9() {
+    const step = APP_STATE.duelSteps[APP_STATE.viewPly];
+    if (!step) return;
+    const isClassic = APP_STATE.ruleMode === `classic`;
+    const isGameEnd = (APP_STATE.viewPly === APP_STATE.duelSteps.length - 1) && APP_STATE.duelWinner > 0;
+    if (isGameEnd) {
+      const kpiEval = document.getElementById(`kpi-eval-val`);
+      const kpiEvalSub = document.getElementById(`kpi-eval-sub`);
+      if (kpiEval) kpiEval.textContent = `已終局`;
+      if (kpiEvalSub) kpiEvalSub.textContent = `請回溯至未終局手數進行剖析`;
+      return;
+    }
+    const turn = APP_STATE.viewPly & 1;
+    const res = chooseMoveS9(step.redMask, step.blueMask, isClassic, turn, APP_STATE.s9Depth, APP_STATE.s9Exact, false);
+    APP_STATE.s9InspectResult = { ...res, ply: APP_STATE.viewPly };
+    APP_STATE.s9LastPerf = res;
+    refreshDuelUI();
+  }
+
+  // Human Takeover Logic
+  function toggleHumanTakeover() {
+    if (APP_STATE.humanMode) {
+      exitHumanTakeover();
+      return;
+    }
+    stopPlayback();
+    // Truncate future steps after viewPly!
+    const isEndAlready = (APP_STATE.viewPly === APP_STATE.duelSteps.length - 1) && APP_STATE.duelWinner > 0;
+    if (isEndAlready && APP_STATE.viewPly > 0) {
+      // Step back 1 move automatically if user clicked takeover right on a finished terminal state
+      APP_STATE.viewPly--;
+    }
+    APP_STATE.duelSteps = APP_STATE.duelSteps.slice(0, APP_STATE.viewPly + 1);
+    APP_STATE.duelWinner = 0;
+    APP_STATE.duelLossTri = -1;
+    APP_STATE.humanMode = true;
+    APP_STATE.humanSide = APP_STATE.viewPly & 1;
+    APP_STATE.pendingEdge = -1;
+    pickedVertex = -1;
+
+    const btn = document.getElementById(`btn-human-takeover`);
+    const panel = document.getElementById(`takeover-panel`);
+    if (btn) {
+      btn.classList.add(`btn-takeover-active`);
+      btn.textContent = `人腦接管進行中（點擊結束）`;
+    }
+    if (panel) panel.classList.add(`is-visible`);
+    updateTakeoverStatus(`輪到您（${APP_STATE.humanSide === 0 ? `P1` : `P2`}）落子：請點擊未著色邊或兩個頂點`);
+    refreshDuelUI();
+  }
+
+  function exitHumanTakeover(silent = false) {
+    APP_STATE.humanMode = false;
+    APP_STATE.pendingEdge = -1;
+    pickedVertex = -1;
+    const btn = document.getElementById(`btn-human-takeover`);
+    const panel = document.getElementById(`takeover-panel`);
+    const colorBox = document.getElementById(`takeover-color-choice`);
+    if (btn) {
+      btn.classList.remove(`btn-takeover-active`);
+      btn.textContent = `從此步開始人腦接管`;
+    }
+    if (panel) panel.classList.remove(`is-visible`);
+    if (colorBox) colorBox.style.display = `none`;
+    if (!silent) refreshDuelUI();
+  }
+
+  function updateTakeoverStatus(msg) {
+    const el = document.getElementById(`takeover-status-msg`);
+    if (el) el.textContent = msg;
+  }
+
+  function onVertexPointerDown(evt, v) {
+    const wrap = document.getElementById(`k6-svg`);
+    if (!wrap) return;
+    dragVertexIdx = v;
+    dragMoved = false;
+    evt.target.setPointerCapture(evt.pointerId);
+
+    function onMove(mv) {
+      if (dragVertexIdx < 0) return;
+      const rect = wrap.getBoundingClientRect();
+      const sx = ((mv.clientX - rect.left) / rect.width) * 440;
+      const sy = ((mv.clientY - rect.top) / rect.height) * 380;
+      if (Math.hypot(sx - VERTEX_POS[dragVertexIdx].x, sy - VERTEX_POS[dragVertexIdx].y) > 4) {
+        dragMoved = true;
+      }
+      VERTEX_POS[dragVertexIdx].x = Math.max(28, Math.min(412, sx));
+      VERTEX_POS[dragVertexIdx].y = Math.max(28, Math.min(352, sy));
+      renderBoardSVG();
+    }
+    function onUp() {
+      dragVertexIdx = -1;
+      window.removeEventListener(`pointermove`, onMove);
+      window.removeEventListener(`pointerup`, onUp);
+    }
+    window.addEventListener(`pointermove`, onMove);
+    window.addEventListener(`pointerup`, onUp);
+  }
+
+  function onVertexClick(v) {
+    if (dragMoved) { dragMoved = false; return; }
+    if (!APP_STATE.humanMode || APP_STATE.duelWinner > 0) return;
+
+    if (pickedVertex === -1) {
+      pickedVertex = v;
+      renderBoardSVG();
+      updateTakeoverStatus(`已選起點 ${VERTEX_NAMES[v]}，請點選第二個頂點完成連線`);
+    } else if (pickedVertex === v) {
+      pickedVertex = -1;
+      renderBoardSVG();
+      updateTakeoverStatus(`已取消頂點選取`);
+    } else {
+      const e = EDGE_IDX[pickedVertex][v];
+      pickedVertex = -1;
+      onEdgeClick(e);
+    }
+  }
+
+  function onEdgeClick(e) {
+    if (!APP_STATE.humanMode || APP_STATE.duelWinner > 0) return;
+    const step = APP_STATE.duelSteps[APP_STATE.viewPly];
+    if (!step) return;
+    const occ = step.redMask | step.blueMask;
+    if (occ & (1 << e)) {
+      updateTakeoverStatus(`邊 (${VERTEX_NAMES[EDGES[e][0]]}-${VERTEX_NAMES[EDGES[e][1]]}) 已著色，請選擇空白邊`);
+      return;
+    }
+
+    const isClassic = APP_STATE.ruleMode === `classic`;
+    if (isClassic) {
+      const humanColor = (APP_STATE.humanSide === 0) ? 1 : 2;
+      executeHumanAndAiReply(e, humanColor);
+    } else {
+      APP_STATE.pendingEdge = e;
+      const colorBox = document.getElementById(`takeover-color-choice`);
+      const edgeLbl = document.getElementById(`takeover-edge-label`);
+      const btnRed = document.getElementById(`btn-paint-red`);
+      const btnBlue = document.getElementById(`btn-paint-blue`);
+      const tag = step.stats.edgeTags[e];
+      if (edgeLbl) edgeLbl.textContent = `已選邊 (${VERTEX_NAMES[EDGES[e][0]]}-${VERTEX_NAMES[EDGES[e][1]]})`;
+      if (btnRed) {
+        const rDanger = (tag === `red-mine` || tag === `double-mine`);
+        btnRed.textContent = rDanger ? `塗成紅色（⚠ 觸雷即敗）` : `塗成紅色 (Red)`;
+      }
+      if (btnBlue) {
+        const bDanger = (tag === `blue-mine` || tag === `double-mine`);
+        btnBlue.textContent = bDanger ? `塗成藍色（⚠ 觸雷即敗）` : `塗成藍色 (Blue)`;
+      }
+      if (colorBox) colorBox.style.display = `flex`;
+      renderBoardSVG();
+      updateTakeoverStatus(`請為邊 (${VERTEX_NAMES[EDGES[e][0]]}-${VERTEX_NAMES[EDGES[e][1]]}) 選擇顏色`);
+    }
+  }
+
+  function cancelPendingEdge() {
+    APP_STATE.pendingEdge = -1;
+    const colorBox = document.getElementById(`takeover-color-choice`);
+    if (colorBox) colorBox.style.display = `none`;
+    renderBoardSVG();
+    updateTakeoverStatus(`已取消選邊，請重新點選`);
+  }
+
+  function commitHumanColor(color) {
+    if (APP_STATE.pendingEdge < 0) return;
+    const e = APP_STATE.pendingEdge;
+    APP_STATE.pendingEdge = -1;
+    const colorBox = document.getElementById(`takeover-color-choice`);
+    if (colorBox) colorBox.style.display = `none`;
+    executeHumanAndAiReply(e, color);
+  }
+
+  function executeHumanAndAiReply(e, c) {
+    const isClassic = APP_STATE.ruleMode === `classic`;
+    const prevStep = APP_STATE.duelSteps[APP_STATE.viewPly];
+    const turn = APP_STATE.viewPly & 1;
+    const bit = 1 << e;
+    const targetBefore = (c === 1) ? prevStep.redMask : prevStep.blueMask;
+    const lossTri = findCompletedTriangle(targetBefore, e);
+    const nRed = (c === 1) ? (prevStep.redMask | bit) : prevStep.redMask;
+    const nBlue = (c === 2) ? (prevStep.blueMask | bit) : prevStep.blueMask;
+    const nextPly = prevStep.ply + 1;
+    const nextStats = analyzeBoardState(nRed, nBlue, isClassic, nextPly & 1);
+    const note = `人腦著手；` + generateMoveNote(prevStep.stats, nextStats, e, c, isClassic, lossTri, -1);
+
+    APP_STATE.duelSteps.push({
+      ply: nextPly,
+      turn,
+      player: `${turn === 0 ? `P1` : `P2`} (人腦)`,
+      edge: e,
+      edgeLabel: `${VERTEX_NAMES[EDGES[e][0]]}-${VERTEX_NAMES[EDGES[e][1]]}`,
+      color: c,
+      redMask: nRed,
+      blueMask: nBlue,
+      stats: nextStats,
+      note,
+      s9Meta: null
+    });
+    APP_STATE.viewPly = nextPly;
+
+    if (lossTri >= 0) {
+      APP_STATE.duelWinner = (turn === 0) ? 2 : 1;
+      APP_STATE.duelLossTri = lossTri;
+      updateTakeoverStatus(`人腦構成單色三角形，對局結束`);
+      refreshDuelUI();
+      return;
+    }
+
+    // AI counter-move immediately
+    const aiTurn = nextPly & 1;
+    const aiStrat = (aiTurn === 0) ? APP_STATE.p1Strat : APP_STATE.p2Strat;
+    const aiRes = chooseStrategyMove(aiStrat, nRed, nBlue, isClassic, aiTurn, { e, c }, APP_STATE.s9Depth, APP_STATE.s9Exact);
+    if (aiStrat === 8) APP_STATE.s9LastPerf = aiRes;
+
+    const ae = aiRes.e;
+    const ac = aiRes.c;
+    const abit = 1 << ae;
+    const aiTargetBefore = (ac === 1) ? nRed : nBlue;
+    const aiLossTri = findCompletedTriangle(aiTargetBefore, ae);
+    const nnRed = (ac === 1) ? (nRed | abit) : nRed;
+    const nnBlue = (ac === 2) ? (nBlue | abit) : nBlue;
+    const aiPly = nextPly + 1;
+    const aiStats = analyzeBoardState(nnRed, nnBlue, isClassic, aiPly & 1);
+    const aiNote = generateMoveNote(nextStats, aiStats, ae, ac, isClassic, aiLossTri, aiStrat);
+
+    APP_STATE.duelSteps.push({
+      ply: aiPly,
+      turn: aiTurn,
+      player: `${aiTurn === 0 ? `P1` : `P2`} (${STRATEGIES[aiStrat].code})`,
+      edge: ae,
+      edgeLabel: `${VERTEX_NAMES[EDGES[ae][0]]}-${VERTEX_NAMES[EDGES[ae][1]]}`,
+      color: ac,
+      redMask: nnRed,
+      blueMask: nnBlue,
+      stats: aiStats,
+      note: aiNote,
+      s9Meta: (aiStrat === 8) ? aiRes : null
+    });
+    APP_STATE.viewPly = aiPly;
+
+    if (aiLossTri >= 0) {
+      APP_STATE.duelWinner = (aiTurn === 0) ? 2 : 1;
+      APP_STATE.duelLossTri = aiLossTri;
+      updateTakeoverStatus(`AI (${STRATEGIES[aiStrat].code}) 構成單色三角形，人腦獲勝！`);
+    } else {
+      updateTakeoverStatus(`AI (${STRATEGIES[aiStrat].code}) 應手 (${VERTEX_NAMES[EDGES[ae][0]]}-${VERTEX_NAMES[EDGES[ae][1]]})，輪到人腦`);
+    }
+    refreshDuelUI();
+  }
+
+  // =========================================================================
+  // 9. ONE-CLICK CLIPBOARD COPY (EXCEL TSV)
+  // =========================================================================
+  function copyTranscriptToClipboard() {
+    const ruleLabel = APP_STATE.ruleMode === `classic` ? `傳統一人一色 (Classic Sim)` : `自由選色 (Generalized Ramsey)`;
+    const p1Label = STRATEGIES[APP_STATE.p1Strat].short;
+    const p2Label = STRATEGIES[APP_STATE.p2Strat].short;
+    const verdict = APP_STATE.duelWinner > 0 ? `P${APP_STATE.duelWinner} 獲勝` : `尚未終局`;
+
+    const lines = [
+      `# Ramsey K6 對局棋譜\t規則：${ruleLabel}\tP1：${p1Label}\tP2：${p2Label}\tS9深度：${APP_STATE.s9Preset}\t結果：${verdict}`,
+      `手數\t玩家\t著手(u,v)\t顏色\t當前雙地雷M\t剩餘安全生路\t關鍵轉折評註`
+    ];
+    APP_STATE.duelSteps.forEach(s => {
+      const col = s.color === 1 ? `紅(Red)` : (s.color === 2 ? `藍(Blue)` : `-`);
+      lines.push(`${s.ply}\t${s.player}\t${s.edgeLabel}\t${col}\t${s.stats.doubleMines}\t${s.stats.playableForCurrent}\t${s.note}`);
+    });
+    const tsv = lines.join(`\n`);
+
+    const fb = document.getElementById(`copy-feedback`);
+    const fallbackBox = document.getElementById(`copy-fallback-box`);
+    const fallbackText = document.getElementById(`copy-fallback-text`);
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tsv).then(() => {
+        if (fb) fb.textContent = `已複製完整 TSV 棋譜（共 ${APP_STATE.duelSteps.length} 列），可直接貼入 Excel 或試算表。`;
+        if (fallbackBox) fallbackBox.classList.remove(`is-visible`);
+      }).catch(() => {
+        if (fallbackText) fallbackText.value = tsv;
+        if (fallbackBox) fallbackBox.classList.add(`is-visible`);
+        if (fb) fb.textContent = `已產生 Excel TSV 棋譜於下方文字框，請全選複製。`;
+      });
+    } else {
+      if (fallbackText) fallbackText.value = tsv;
+      if (fallbackBox) fallbackBox.classList.add(`is-visible`);
+      if (fb) fb.textContent = `已產生 Excel TSV 棋譜於下方文字框，請全選複製。`;
+    }
+  }
+
+  // =========================================================================
+  // 10. 10,000-GAME MONTE CARLO ENGINE & SVG CHARTS
+  // =========================================================================
+  let mcRunning = false;
+  let mcCancelFlag = false;
+
+  function startMonteCarlo() {
+    if (mcRunning) return;
+    const p1 = parseInt(document.getElementById(`mc-p1`)?.value || `8`, 10);
+    const p2 = parseInt(document.getElementById(`mc-p2`)?.value || `6`, 10);
+    const total = parseInt(document.getElementById(`mc-count`)?.value || `10000`, 10);
+    runMonteCarloAsync(p1, p2, total);
+  }
+
+  function stopMonteCarlo() {
+    mcCancelFlag = true;
+  }
+
+  function runMonteCarloAsync(p1, p2, total) {
+    mcRunning = true;
+    mcCancelFlag = false;
+    const btnRun = document.getElementById(`btn-mc-run`);
+    const btnStop = document.getElementById(`btn-mc-stop`);
+    const pWrap = document.getElementById(`mc-progress-wrap`);
+    const pFill = document.getElementById(`mc-progress-fill`);
+    const pLbl = document.getElementById(`mc-progress-label`);
+    const pTime = document.getElementById(`mc-progress-time`);
+
+    if (btnRun) btnRun.disabled = true;
+    if (btnStop) btnStop.disabled = false;
+    if (pWrap) pWrap.classList.add(`is-visible`);
+
+    const isClassic = APP_STATE.ruleMode === `classic`;
+    const depth = APP_STATE.s9Depth;
+    const exact = APP_STATE.s9Exact;
+
+    let done = 0;
+    let p1Wins = 0;
+    let p2Wins = 0;
+    let sumM = 0;
+    let maxMObserved = 0;
+    let sumPly = 0;
+    const mHist = new Int32Array(7); // M = 0..6
+    const p1PlyHist = new Int32Array(16);
+    const p2PlyHist = new Int32Array(16);
+    const tStart = performance.now();
+
+    function chunk() {
+      if (mcCancelFlag || done >= total) {
+        mcRunning = false;
+        if (btnRun) btnRun.disabled = false;
+        if (btnStop) btnStop.disabled = true;
+        renderMCResults(done, p1Wins, p2Wins, sumM, maxMObserved, sumPly, mHist, p1PlyHist, p2PlyHist, performance.now() - tStart);
+        updateS9DepthUI();
+        return;
+      }
+
+      const chunkStart = performance.now();
+      // Dynamic batch size so UI stays 60fps even at D6/Exact
+      while (done < total && (performance.now() - chunkStart) < 16) {
+        const res = simulateFullGame(p1, p2, isClassic, depth, exact, false);
+        done++;
+        if (res.winner === 1) {
+          p1Wins++;
+          p1PlyHist[res.plyCount]++;
+        } else {
+          p2Wins++;
+          p2PlyHist[res.plyCount]++;
+        }
+        const mBucket = Math.min(6, res.maxM);
+        mHist[mBucket]++;
+        sumM += res.maxM;
+        if (res.maxM > maxMObserved) maxMObserved = res.maxM;
+        sumPly += res.plyCount;
+      }
+
+      const elapsed = (performance.now() - tStart) / 1000;
+      const pct = (done / total) * 100;
+      if (pFill) pFill.style.width = `${pct.toFixed(1)}%`;
+      if (pLbl) pLbl.textContent = `模擬進度：${done.toLocaleString()} / ${total.toLocaleString()} 局（${pct.toFixed(0)}%）`;
+      if (pTime) pTime.textContent = `耗時：${elapsed.toFixed(2)} s`;
+
+      renderMCResults(done, p1Wins, p2Wins, sumM, maxMObserved, sumPly, mHist, p1PlyHist, p2PlyHist, performance.now() - tStart);
+      requestAnimationFrame(chunk);
+    }
+
+    requestAnimationFrame(chunk);
+  }
+
+  function renderMCResults(done, p1Wins, p2Wins, sumM, maxM, sumPly, mHist, p1PlyHist, p2PlyHist, elapsedMs) {
+    if (done === 0) return;
+    const p1Pct = (p1Wins / done) * 100;
+    const p2Pct = (p2Wins / done) * 100;
+
+    const k1 = document.getElementById(`mc-kpi-p1`);
+    const k1n = document.getElementById(`mc-kpi-p1-n`);
+    const k2 = document.getElementById(`mc-kpi-p2`);
+    const k2n = document.getElementById(`mc-kpi-p2-n`);
+    const km = document.getElementById(`mc-kpi-m`);
+    const kmx = document.getElementById(`mc-kpi-m-max`);
+    const kl = document.getElementById(`mc-kpi-len`);
+    const ke = document.getElementById(`mc-kpi-elapsed`);
+
+    if (k1) k1.textContent = `${p1Pct.toFixed(1)}%`;
+    if (k1n) k1n.textContent = `${p1Wins.toLocaleString()} 勝`;
+    if (k2) k2.textContent = `${p2Pct.toFixed(1)}%`;
+    if (k2n) k2n.textContent = `${p2Wins.toLocaleString()} 勝`;
+    if (km) km.textContent = (sumM / done).toFixed(2);
+    if (kmx) kmx.textContent = `最高觀測 M = ${maxM}`;
+    if (kl) kl.textContent = `${(sumPly / done).toFixed(2)} 手`;
+    if (ke) ke.textContent = `共 ${done.toLocaleString()} 局 · ${(elapsedMs / 1000).toFixed(2)} s`;
+
+    // Chart 1: Win Rate Bar Chart
+    const cWin = document.getElementById(`chart-winrate`);
+    if (cWin) {
+      const h1 = (p1Pct / 100) * 140;
+      const h2 = (p2Pct / 100) * 140;
+      cWin.innerHTML = `
+        <svg viewBox="0 0 320 220" aria-label="先後手勝率長條圖">
+          <line x1="40" y1="175" x2="295" y2="175" stroke="var(--outline)" stroke-width="1.5" />
+          <line x1="40" y1="35" x2="295" y2="35" stroke="var(--outline-variant)" stroke-dasharray="3 3" />
+          <line x1="40" y1="105" x2="295" y2="105" stroke="var(--outline-variant)" stroke-dasharray="3 3" />
+          <text x="34" y="39" text-anchor="end" font-family="var(--font-label)" font-size="10" fill="var(--on-surface-variant)">100%</text>
+          <text x="34" y="109" text-anchor="end" font-family="var(--font-label)" font-size="10" fill="var(--on-surface-variant)">50%</text>
+          <text x="34" y="179" text-anchor="end" font-family="var(--font-label)" font-size="10" fill="var(--on-surface-variant)">0%</text>
+          <rect x="85" y="${(175 - h1).toFixed(1)}" width="58" height="${h1.toFixed(1)}" fill="var(--data-4)" />
+          <text x="114" y="${(169 - h1).toFixed(1)}" text-anchor="middle" font-family="var(--font-label)" font-size="12" font-weight="700" fill="var(--data-4)">${p1Pct.toFixed(1)}%</text>
+          <text x="114" y="196" text-anchor="middle" font-family="var(--font-label)" font-size="11" fill="var(--on-surface)">P1 先手</text>
+          <rect x="190" y="${(175 - h2).toFixed(1)}" width="58" height="${h2.toFixed(1)}" fill="var(--data-1)" />
+          <text x="219" y="${(169 - h2).toFixed(1)}" text-anchor="middle" font-family="var(--font-label)" font-size="12" font-weight="700" fill="var(--data-1)">${p2Pct.toFixed(1)}%</text>
+          <text x="219" y="196" text-anchor="middle" font-family="var(--font-label)" font-size="11" fill="var(--on-surface)">P2 後手</text>
+        </svg>
+      `;
+    }
+
+    // Chart 2: M Histogram (M = 0..6)
+    const cM = document.getElementById(`chart-m-hist`);
+    if (cM) {
+      let maxVal = 1;
+      for (let m = 0; m <= 6; m++) if (mHist[m] > maxVal) maxVal = mHist[m];
+      let bars = ``;
+      for (let m = 0; m <= 6; m++) {
+        const pct = (mHist[m] / done) * 100;
+        const bh = (mHist[m] / maxVal) * 130;
+        const bx = 46 + m * 36;
+        const by = 175 - bh;
+        bars += `<rect x="${bx}" y="${by.toFixed(1)}" width="24" height="${bh.toFixed(1)}" fill="var(--data-2)" />`;
+        if (pct >= 1) {
+          bars += `<text x="${bx + 12}" y="${(by - 5).toFixed(1)}" text-anchor="middle" font-family="var(--font-label)" font-size="9.5" fill="var(--on-surface)">${pct.toFixed(0)}%</text>`;
+        }
+        bars += `<text x="${bx + 12}" y="196" text-anchor="middle" font-family="var(--font-label)" font-size="10.5" fill="var(--on-surface)">M=${m}</text>`;
+      }
+      cM.innerHTML = `
+        <svg viewBox="0 0 320 220" aria-label="雙地雷 M 頻率直方圖">
+          <line x1="36" y1="175" x2="300" y2="175" stroke="var(--outline)" stroke-width="1.5" />
+          ${bars}
+        </svg>
+      `;
+    }
+
+    // Chart 3: Game Length Line Chart (Ply 5..15)
+    const cPly = document.getElementById(`chart-ply-line`);
+    if (cPly) {
+      let maxPlyVal = 1;
+      for (let k = 5; k <= 15; k++) {
+        if (p1PlyHist[k] > maxPlyVal) maxPlyVal = p1PlyHist[k];
+        if (p2PlyHist[k] > maxPlyVal) maxPlyVal = p2PlyHist[k];
+      }
+      const pts1 = [];
+      const pts2 = [];
+      let ticks = ``;
+      for (let k = 5; k <= 15; k++) {
+        const px = 42 + (k - 5) * 25;
+        const py1 = 175 - (p1PlyHist[k] / maxPlyVal) * 130;
+        const py2 = 175 - (p2PlyHist[k] / maxPlyVal) * 130;
+        pts1.push(`${px},${py1.toFixed(1)}`);
+        pts2.push(`${px},${py2.toFixed(1)}`);
+        if (k % 2 === 1) {
+          ticks += `<text x="${px}" y="196" text-anchor="middle" font-family="var(--font-label)" font-size="10" fill="var(--on-surface-variant)">${k}</text>`;
+        }
+      }
+      cPly.innerHTML = `
+        <svg viewBox="0 0 320 220" aria-label="終局手數分佈折線圖">
+          <line x1="36" y1="175" x2="300" y2="175" stroke="var(--outline)" stroke-width="1.5" />
+          <polyline fill="none" stroke="var(--data-4)" stroke-width="2.5" points="${pts1.join(` `)}" />
+          <polyline fill="none" stroke="var(--data-1)" stroke-width="2.5" points="${pts2.join(` `)}" />
+          ${ticks}
+          <rect x="44" y="14" width="10" height="3" fill="var(--data-4)" />
+          <text x="58" y="19" font-family="var(--font-label)" font-size="10" fill="var(--on-surface)">P1勝手數</text>
+          <rect x="130" y="14" width="10" height="3" fill="var(--data-1)" />
+          <text x="144" y="19" font-family="var(--font-label)" font-size="10" fill="var(--on-surface)">P2勝手數</text>
+        </svg>
+      `;
+    }
+  }
+
+  // =========================================================================
+  // 11. 9x9 STRATEGY MATRIX HEATMAP
+  // =========================================================================
+  let matrixRunning = false;
+  let matrixCancelFlag = false;
+  let selectedCell = null;
+
+  function renderMatrixTableSkeleton() {
+    const thead = document.getElementById(`matrix-thead`);
+    const tbody = document.getElementById(`matrix-tbody`);
+    if (!thead || !tbody) return;
+
+    thead.innerHTML = `<tr><th>P1 ＼ P2</th>${STRATEGIES.map(s => `<th title="${s.name}">${s.code}</th>`).join(``)}<th>P1 均勝</th></tr>`;
+
+    tbody.innerHTML = STRATEGIES.map((r, ri) => {
+      const cells = STRATEGIES.map((c, ci) =>
+        `<td class="matrix-cell" id="mcell-${ri}-${ci}" onclick="onMatrixCellClick(${ri}, ${ci})">--</td>`
+      ).join(``);
+      return `<tr><th title="${r.name}">${r.code} ${r.name}</th>${cells}<td id="mrow-avg-${ri}" style="font-weight:700;background:var(--surface-container);">--</td></tr>`;
+    }).join(``) + `<tr><th>P2 反制均勝</th>${STRATEGIES.map((_, ci) => `<td id="mcol-avg-${ci}" style="font-weight:700;background:var(--surface-container);">--</td>`).join(``)}<td style="background:var(--surface-container);">--</td></tr>`;
+  }
+
+  function updateMatrixCellDOM(ri, ci, p1Pct, games) {
+    const td = document.getElementById(`mcell-${ri}-${ci}`);
+    if (!td) return;
+    td.innerHTML = `${p1Pct.toFixed(0)}%<span class="matrix-cell-sub">${games}局</span>`;
+    // Token-based color-mix heatmap shading (no raw hex!)
+    if (p1Pct >= 50) {
+      const strength = Math.min(82, Math.round(((p1Pct - 50) / 50) * 75) + 8);
+      td.style.backgroundColor = `color-mix(in srgb, var(--data-4) ${strength}%, var(--surface-container-low))`;
+      td.style.color = strength > 48 ? `var(--on-primary)` : `var(--on-surface)`;
+    } else {
+      const strength = Math.min(82, Math.round(((50 - p1Pct) / 50) * 75) + 8);
+      td.style.backgroundColor = `color-mix(in srgb, var(--data-1) ${strength}%, var(--surface-container-low))`;
+      td.style.color = strength > 48 ? `var(--on-primary)` : `var(--on-surface)`;
+    }
+  }
+
+  function updateMatrixAverages(matrix) {
+    for (let r = 0; r < 9; r++) {
+      let sum = 0;
+      let cnt = 0;
+      for (let c = 0; c < 9; c++) {
+        if (matrix[r][c] !== null) { sum += matrix[r][c]; cnt++; }
+      }
+      const el = document.getElementById(`mrow-avg-${r}`);
+      if (el) el.textContent = cnt ? `${(sum / cnt).toFixed(1)}%` : `--`;
+    }
+    for (let c = 0; c < 9; c++) {
+      let sum = 0;
+      let cnt = 0;
+      for (let r = 0; r < 9; r++) {
+        if (matrix[r][c] !== null) { sum += (100 - matrix[r][c]); cnt++; }
+      }
+      const el = document.getElementById(`mcol-avg-${c}`);
+      if (el) el.textContent = cnt ? `${(sum / cnt).toFixed(1)}%` : `--`;
+    }
+  }
+
+  function stopMatrixScan() {
+    matrixCancelFlag = true;
+  }
+
+  function runMatrixScan(mode) {
+    if (matrixRunning) return;
+    matrixRunning = true;
+    matrixCancelFlag = false;
+
+    const gamesPerCell = (mode === `fast`) ? 100 : 400;
+    const scanDepth = (mode === `fast`) ? Math.min(APP_STATE.s9Depth, 2) : APP_STATE.s9Depth;
+    const scanExact = (mode === `fast`) ? 0 : APP_STATE.s9Exact;
+    const isClassic = APP_STATE.ruleMode === `classic`;
+
+    const btnFast = document.getElementById(`btn-matrix-fast`);
+    const btnDeep = document.getElementById(`btn-matrix-deep`);
+    const btnStop = document.getElementById(`btn-matrix-stop`);
+    const pWrap = document.getElementById(`matrix-progress-wrap`);
+    const pFill = document.getElementById(`matrix-progress-fill`);
+    const pLbl = document.getElementById(`matrix-progress-label`);
+    const pTime = document.getElementById(`matrix-progress-time`);
+    const stBadge = document.getElementById(`matrix-status-badge`);
+
+    if (btnFast) btnFast.disabled = true;
+    if (btnDeep) btnDeep.disabled = true;
+    if (btnStop) btnStop.disabled = false;
+    if (pWrap) pWrap.classList.add(`is-visible`);
+    if (stBadge) stBadge.textContent = mode === `fast` ? `極速掃描中（S9 D=${scanDepth}）…` : `高精度深層掃描中（S9 D=${scanDepth}${scanExact ? `+殘局窮舉` : ``}）…`;
+
+    const matrix = Array.from({ length: 9 }, () => Array(9).fill(null));
+    let cellIdx = 0;
+    const tStart = performance.now();
+
+    function stepCell() {
+      if (matrixCancelFlag || cellIdx >= 81) {
+        matrixRunning = false;
+        if (btnFast) btnFast.disabled = false;
+        if (btnDeep) btnDeep.disabled = false;
+        if (btnStop) btnStop.disabled = true;
+        const sec = ((performance.now() - tStart) / 1000).toFixed(2);
+        if (stBadge) stBadge.textContent = `掃描完成：${cellIdx}/81 組合（每格 ${gamesPerCell} 局 · S9 D=${scanDepth}${scanExact ? `+窮舉` : ``} · ${sec}s）`;
+        APP_STATE.matrixData = { rule: APP_STATE.ruleMode, matrix, gamesPerCell };
+        updateS9DepthUI();
+        saveAppState();
+        return;
+      }
+
+      const chunkStart = performance.now();
+      while (cellIdx < 81 && (performance.now() - chunkStart) < 18) {
+        const r = Math.floor(cellIdx / 9);
+        const c = cellIdx % 9;
+        let p1Wins = 0;
+        for (let g = 0; g < gamesPerCell; g++) {
+          const res = simulateFullGame(r, c, isClassic, scanDepth, scanExact, false);
+          if (res.winner === 1) p1Wins++;
+        }
+        const pct = (p1Wins / gamesPerCell) * 100;
+        matrix[r][c] = pct;
+        updateMatrixCellDOM(r, c, pct, gamesPerCell);
+        cellIdx++;
+      }
+
+      updateMatrixAverages(matrix);
+      const elapsed = (performance.now() - tStart) / 1000;
+      if (pFill) pFill.style.width = `${((cellIdx / 81) * 100).toFixed(1)}%`;
+      if (pLbl) pLbl.textContent = `掃描進度：${cellIdx} / 81 組合`;
+      if (pTime) pTime.textContent = `耗時：${elapsed.toFixed(2)} s`;
+
+      requestAnimationFrame(stepCell);
+    }
+
+    requestAnimationFrame(stepCell);
+  }
+
+  function onMatrixCellClick(ri, ci) {
+    if (selectedCell) {
+      const prev = document.getElementById(`mcell-${selectedCell.ri}-${selectedCell.ci}`);
+      if (prev) prev.classList.remove(`is-selected`);
+    }
+    selectedCell = { ri, ci };
+    const cur = document.getElementById(`mcell-${ri}-${ci}`);
+    if (cur) cur.classList.add(`is-selected`);
+
+    APP_STATE.p1Strat = ri;
+    APP_STATE.p2Strat = ci;
+    const sp1 = document.getElementById(`sel-p1`);
+    const sp2 = document.getElementById(`sel-p2`);
+    if (sp1) sp1.value = String(ri);
+    if (sp2) sp2.value = String(ci);
+
+    runNewDuel();
+    const sec1 = document.getElementById(`sec1-heading`);
+    if (sec1) sec1.scrollIntoView({ behavior: `smooth`, block: `start` });
+  }
+
+  // =========================================================================
+  // 12. STATE PERSISTENCE VIA GEMINI NOTEBOOK SHIM API
+  // =========================================================================
+  function saveAppState() {
+    if (!window.notebookAppApi || !window.notebookAppApi.setAppState) return;
+    window.notebookAppApi.setAppState({
+      ruleMode: APP_STATE.ruleMode,
+      s9Preset: APP_STATE.s9Preset,
+      p1Strat: APP_STATE.p1Strat,
+      p2Strat: APP_STATE.p2Strat,
+      layoutMode: APP_STATE.layoutMode
+    }).catch(() => {});
+  }
+
+  async function initApp() {
+    populateStrategySelects();
+    renderStrategyCompendium();
+    renderMatrixTableSkeleton();
+
+    try {
+      if (window.notebookAppApi && window.notebookAppApi.getAppState) {
+        const saved = await window.notebookAppApi.getAppState();
+        if (saved) {
+          if (saved.ruleMode === `classic` || saved.ruleMode === `generalized`) {
+            APP_STATE.ruleMode = saved.ruleMode;
+          }
+          if (saved.s9Preset) setS9Preset(saved.s9Preset);
+          if (typeof saved.p1Strat === `number`) APP_STATE.p1Strat = saved.p1Strat;
+          if (typeof saved.p2Strat === `number`) APP_STATE.p2Strat = saved.p2Strat;
+          if (saved.layoutMode === `hex` || saved.layoutMode === `force`) {
+            APP_STATE.layoutMode = saved.layoutMode;
+          }
+          populateStrategySelects();
+        }
+      }
+    } catch (err) {
+      // Ignore state load error and proceed with defaults
+    }
+
+    clearTT(APP_STATE.ruleMode === `classic`);
+    updateRuleUI();
+    updateS9DepthUI();
+    runNewDuel();
+
+    // Run a crisp baseline 1,000-game Monte Carlo (S3 vs S2) & fast 9x9 scan on startup so visuals are immediately populated
+    const mp1 = document.getElementById(`mc-p1`);
+    const mp2 = document.getElementById(`mc-p2`);
+    if (mp1 && mp2) {
+      runMonteCarloAsync(parseInt(mp1.value, 10), parseInt(mp2.value, 10), 1000);
+    }
+    setTimeout(() => {
+      if (!matrixRunning && !APP_STATE.matrixData) {
+        runMatrixScan(`fast`);
+      }
+    }, 120);
+
+    if (window.notebookAppApi && window.notebookAppApi.notifyAppReady) {
+      window.notebookAppApi.notifyAppReady();
+    }
+  }
+
+  document.addEventListener(`DOMContentLoaded`, initApp);
+  </script>
+</body>
+</html>
